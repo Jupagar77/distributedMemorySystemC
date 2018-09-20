@@ -2,9 +2,13 @@ Correr programas:
 1. Agregue codigo en los archivos servidor.c o cliente.c
 2. Guarde el archivo.
 3. Desde la consola, corra el comando:
+
     gcc -pthread -o servidor servidor.c
+
     gcc -o cliente cliente.c
+
    Nota: -pthread en caso de que el archivo tenga implementacion de hilos.
+
 4. Corra ambos programas, ya sea en:
 
    Misma computadora:
