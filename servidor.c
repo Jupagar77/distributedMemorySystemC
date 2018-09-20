@@ -12,6 +12,12 @@
 
 int _fCloseThreads, _conexionServidor;
 
+typedef struct {
+    int id;
+    struct in_addr address;
+    int port;
+} clienteData;
+
 int getch (void)
 {
     int ch;
@@ -27,43 +33,52 @@ int getch (void)
     return ch;
 }
 
+void* atenderCliente(void* clienteDataParam){
+  clienteData *data = clienteDataParam;
+  char buffer[100];
+
+  printf("Conectando con %s:%d\n", inet_ntoa(data->address),htons(data->port));
+  if(recv(data->id, buffer, 100, 0) < 0)
+  { 
+    printf("Error al recibir los datos\n");
+    close(_conexionServidor);
+    return NULL;
+  } else {
+    printf("%s\n", buffer);
+    bzero((char *)&buffer, sizeof(buffer));
+    send(data->id, "Recibido\n", 13, 0);
+  }
+  free(data);
+  return NULL;
+}
+
+
 void* conectarCliente(){
     struct sockaddr_in cliente;
     socklen_t longc; 
     int conexion_cliente;
-    char buffer[100];
     longc = sizeof(cliente);
 
-    while(_fCloseThreads){
-
-        printf("Estatus: %d\n", _fCloseThreads);
-
-        while(conexion_cliente = accept(_conexionServidor, (struct sockaddr *)&cliente, &longc);){ //Espere conexiones de clients
-
-        }
-        
+    while(_fCloseThreads) {
+        printf("Esperando solicitud de algun cliente...\n");
+        conexion_cliente = accept(_conexionServidor, (struct sockaddr *)&cliente, &longc); //Espera una conexion
         // Error
         if(conexion_cliente<0)
         {
-          printf("Error al aceptar trafico\n");
-          close(_conexionServidor);
-          return NULL;
+          printf("Error al conectar con cliente...\n");
         }
 
-        // Conexion encontrada
-        printf("Conectando con %s:%d\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
-        if(recv(conexion_cliente, buffer, 100, 0) < 0)
-        { 
-          printf("Error al recibir los datos\n");
-          close(_conexionServidor);
-          return NULL;
-        } else {
-          printf("%s\n", buffer);
-          bzero((char *)&buffer, sizeof(buffer));
-          send(conexion_cliente, "Recibido\n", 13, 0);
+        pthread_t thread_cliente;
+        clienteData *args = malloc(sizeof *args);
+        args->id = conexion_cliente;
+        args->address = cliente.sin_addr;
+        args->port =  cliente.sin_port;
+        if(pthread_create(&thread_cliente, NULL, atenderCliente, args)){
+          free(args);
         }
-
+        //pthread_join(thread_cliente,NULL);
     }
+    return NULL;
 }
 
 void* finishProgram()

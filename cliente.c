@@ -31,31 +31,25 @@ int main(int argc, char **argv){
   //bcopy(); copia los datos del primer elemendo en el segundo con el tamaño máximo 
   //del tercer argumento.
 
-
-  int i = 0;
-  do{
-
-  conexion = socket(AF_INET, SOCK_STREAM, 0); //Asignación del socket
-  //cliente.sin_addr = *((struct in_addr *)servidor->h_addr); //<--para empezar prefiero que se usen
-  //inet_aton(argv[1],&cliente.sin_addr); //<--alguna de estas dos funciones
-  if(connect(conexion,(struct sockaddr *)&cliente, sizeof(cliente)) < 0)
-  { //conectando con el host
-    printf("Error conectando con el host\n");
-    close(conexion);
-    return 1;
+  int r = rand();
+  while(1){
+    sleep(5);
+    conexion = socket(AF_INET, SOCK_STREAM, 0); //Asignación del socket
+    //cliente.sin_addr = *((struct in_addr *)servidor->h_addr); //<--para empezar prefiero que se usen
+    //inet_aton(argv[1],&cliente.sin_addr); //<--alguna de estas dos funciones
+    if(connect(conexion,(struct sockaddr *)&cliente, sizeof(cliente)) < 0)
+    { //conectando con el host
+      printf("Error conectando con el host\n");
+      close(conexion);
+      return 1;
+    }
+    printf("Conectado con %s:%d\n",inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
+    sprintf(buffer, "Hola mi ID es: %d", r);
+    send(conexion, buffer, 100, 0); //envio
+    bzero(buffer, 100);
+    recv(conexion, buffer, 100, 0); //recepción
+    printf("%s", buffer);
   }
-  printf("Conectado con %s:%d\n",inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
-  //inet_ntoa(); está definida en <arpa/inet.h>
-  printf("Escribe un mensaje: ");
-  fgets(buffer, 100, stdin);
-  send(conexion, buffer, 100, 0); //envio
-  bzero(buffer, 100);
-  recv(conexion, buffer, 100, 0); //recepción
-  printf("%s", buffer);
-
-
-      i++;
-  } while(i<10);
   
 return 0;
 }
