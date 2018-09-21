@@ -6,12 +6,37 @@
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<netdb.h>
-int main(int argc, char **argv){
-  if(argc<2)
+#include<string.h>
+
+#define BUFSIZE 1000
+
+int main(int argc, char* argv[]){
+
+  char bufferParams[BUFSIZE];
+  FILE* file_handle;
+  file_handle = fopen(argv[1], "r");
+
+  char *saveptr;
+  char *foo, *bar;
+
+if(file_handle == NULL)
   {
-    printf("<host> <puerto>\n");
+    printf("Error al abrir el archivo de configuracion.\n");
     return 1;
   }
+
+  while(fgets(bufferParams, BUFSIZE - 1, file_handle) != NULL) 
+  {
+    printf("%s\n", bufferParams);
+    foo = strtok_r(bufferParams, ":", &saveptr);
+    bar = strtok_r(NULL, " ", &saveptr);
+    printf("1: %s\n", foo);
+    printf("2: %s\n", bar);
+  
+  }
+  fclose(file_handle);
+  return 1;
+
   struct sockaddr_in cliente; 
   struct hostent *servidor; 
   servidor = gethostbyname(argv[1]); //Asignacion

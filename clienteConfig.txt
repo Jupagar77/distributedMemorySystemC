@@ -1,0 +1,5 @@
+IPServidor:127.0.0.1
+Puerto:9000
+RangoPaginas:0-10
+MediaExponencial:3
+PropabilidadLectura:80
