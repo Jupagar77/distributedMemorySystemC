@@ -9,7 +9,6 @@
 #include <pthread.h>
 #include <termios.h>
 
-
 int _fCloseThreads, _conexionServidor;
 
 typedef struct {
@@ -37,16 +36,16 @@ void* atenderCliente(void* clienteDataParam){
   clienteData *data = clienteDataParam;
   char buffer[100];
 
-  printf("Conectando con %s:%d\n", inet_ntoa(data->address),htons(data->port));
+  printf("Conectando con %s:%d.\n", inet_ntoa(data->address),htons(data->port));
   if(recv(data->id, buffer, 100, 0) < 0)
   { 
-    printf("Error al recibir los datos\n");
+    printf("Error al recibir los datos.\n");
     close(_conexionServidor);
     return NULL;
   } else {
     printf("%s\n", buffer);
     bzero((char *)&buffer, sizeof(buffer));
-    send(data->id, "Recibido\n", 13, 0);
+    send(data->id, "Recibido.\n", 13, 0);
   }
   free(data);
   return NULL;
@@ -60,12 +59,12 @@ void* conectarCliente(){
     longc = sizeof(cliente);
 
     while(_fCloseThreads) {
-        printf("Esperando solicitud de algun cliente...\n");
+        printf("Esperando solicitud de algun cliente.\n");
         conexion_cliente = accept(_conexionServidor, (struct sockaddr *)&cliente, &longc); //Espera una conexion
         // Error
         if(conexion_cliente<0)
         {
-          printf("Error al conectar con cliente...\n");
+          printf("Error al conectar con cliente.\n");
         }
 
         pthread_t thread_cliente;
@@ -83,30 +82,27 @@ void* conectarCliente(){
 
 void* finishProgram()
 {
+    printf("%s", (char*)"Presion 'E' para finalizar.\n");
     int ch;
     do{
-        printf("%s", (char*)"Exit? \n");
         ch = getch();
         if(ch=='E'){
-            printf("%s", (char*)"Yes \n");
+            printf("%s", (char*)"Saliendo...\n");
             _fCloseThreads = 0;
             return 0;
         }
-        printf("%s", (char*)"No \n");
-    }while(1);
+    } while(1);
 }
 
 
 int main(int argc, char **argv){
-
   //https://es.wikibooks.org/wiki/Programaci%C3%B3n_en_C/Sockets
-  //https://www.geeksforgeeks.org/socket-programming-in-cc-handling-multiple-clients-on-server-without-multi-threading/
     
   // Validar argumentos
   if(argc<2)
   {
     printf("%s <puerto>\n",argv[0]);
-    return 1;
+    return 0;
   }
 
   // Declarar variables
@@ -126,14 +122,14 @@ int main(int argc, char **argv){
   // Conectar puerto con servidor
   if(bind(_conexionServidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0)
   { 
-    printf("Error al asociar el puerto a la conexion\n");
+    printf("Error al asociar el puerto a la conexion.\n");
     close(_conexionServidor);
-    return 1;
+    return 0;
   }
 
   // Empiece a escuchar
   listen(_conexionServidor, 3); 
-  printf("A la escucha en el puerto %d\n", ntohs(servidor.sin_port));
+  printf("A la escucha en el puerto %d.\n", ntohs(servidor.sin_port));
   
   pthread_t thread_arr[2];
   int iter_id[2];
@@ -151,10 +147,6 @@ int main(int argc, char **argv){
   for (int iter=0;iter<2;iter++) {
     pthread_join(thread_arr[iter],NULL);
   }
-  return 0;
-
-
   close(_conexionServidor);
-
   return 0;
 }

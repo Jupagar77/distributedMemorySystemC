@@ -9,6 +9,20 @@
 #include<string.h>
 
 #define BUFSIZE 1000
+#define PARAMS_NUM 5
+
+char* chop(char *string)
+{
+    int i, len;
+    len = strlen(string);
+    char *newstring;
+    newstring = (char *)malloc(len-1);
+    for(i = 0; i < strlen(string)-1; i++)
+    {
+        newstring[i] = string[i]; 
+    }
+    return newstring;
+}
 
 int main(int argc, char* argv[]){
 
@@ -17,9 +31,10 @@ int main(int argc, char* argv[]){
   file_handle = fopen(argv[1], "r");
 
   char *saveptr;
-  char *foo, *bar;
+  char *paramName, *paramValue;
+  char ipServidor[BUFSIZE], puertoConfig[BUFSIZE];
 
-if(file_handle == NULL)
+  if(file_handle == NULL)
   {
     printf("Error al abrir el archivo de configuracion.\n");
     return 1;
@@ -27,52 +42,50 @@ if(file_handle == NULL)
 
   while(fgets(bufferParams, BUFSIZE - 1, file_handle) != NULL) 
   {
-    printf("%s\n", bufferParams);
-    foo = strtok_r(bufferParams, ":", &saveptr);
-    bar = strtok_r(NULL, " ", &saveptr);
-    printf("1: %s\n", foo);
-    printf("2: %s\n", bar);
-  
+    paramName = strtok_r(bufferParams, ":", &saveptr);
+    paramValue = strtok_r(NULL, ":", &saveptr);
+    if (strcmp(paramName, "IPServidor") == 0) 
+    {
+      strcpy(ipServidor, paramValue);
+    } 
+    else if (strcmp(paramName, "Puerto") == 0) {
+      strcpy(puertoConfig, paramValue);
+    }
   }
   fclose(file_handle);
-  return 1;
 
   struct sockaddr_in cliente; 
   struct hostent *servidor; 
-  servidor = gethostbyname(argv[1]); //Asignacion
+  servidor = gethostbyname(chop(ipServidor)); 
   if(servidor == NULL)
-  { //Comprobación
-    printf("Host erróneo\n");
+  { 
+    printf("Host erróneo, ip:%s test", ipServidor);
     return 1;
   }
   int puerto, conexion;
   char buffer[100];
-  puerto=(atoi(argv[2])); //conversion del argumento
-  bzero((char *)&cliente, sizeof((char *)&cliente)); //Rellena toda la estructura de 0's
-        //La función bzero() es como memset() pero inicializando a 0 todas la variables
-  cliente.sin_family = AF_INET; //asignacion del protocolo
-  cliente.sin_port = htons(puerto); //asignacion del puerto
+  puerto=(atoi(chop(puertoConfig))); 
+  bzero((char *)&cliente, sizeof((char *)&cliente)); 
+
+  cliente.sin_family = AF_INET; 
+  cliente.sin_port = htons(puerto); 
   bcopy((char *)servidor->h_addr, (char *)&cliente.sin_addr.s_addr, sizeof(servidor->h_length));
-  //bcopy(); copia los datos del primer elemendo en el segundo con el tamaño máximo 
-  //del tercer argumento.
 
   int r = rand();
   while(1){
-    sleep(5);
-    conexion = socket(AF_INET, SOCK_STREAM, 0); //Asignación del socket
-    //cliente.sin_addr = *((struct in_addr *)servidor->h_addr); //<--para empezar prefiero que se usen
-    //inet_aton(argv[1],&cliente.sin_addr); //<--alguna de estas dos funciones
+    sleep(2);
+    conexion = socket(AF_INET, SOCK_STREAM, 0); 
     if(connect(conexion,(struct sockaddr *)&cliente, sizeof(cliente)) < 0)
-    { //conectando con el host
+    {
       printf("Error conectando con el host\n");
       close(conexion);
       return 1;
     }
     printf("Conectado con %s:%d\n",inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
     sprintf(buffer, "Hola mi ID es: %d", r);
-    send(conexion, buffer, 100, 0); //envio
+    send(conexion, buffer, 100, 0); 
     bzero(buffer, 100);
-    recv(conexion, buffer, 100, 0); //recepción
+    recv(conexion, buffer, 100, 0);
     printf("%s", buffer);
   }
   
