@@ -11,7 +11,7 @@
 #define BUFSIZE 1000
 #define PARAMS_NUM 5
 
-char* chop(char *string)
+char* trimPalabra(char *string)
 {
     int i, len;
     len = strlen(string);
@@ -25,15 +25,16 @@ char* chop(char *string)
 }
 
 int main(int argc, char* argv[]){
-
-  char bufferParams[BUFSIZE];
+  // Declarar variables
+  char bufferParams[BUFSIZE], buffer[100], ipServidor[BUFSIZE], puertoConfig[BUFSIZE];
+  int puerto, conexion;
+  char *saveptr, *paramName, *paramValue;
+  struct sockaddr_in cliente; 
+  struct hostent *servidor; 
   FILE* file_handle;
+
+  // Obtener parametros del archivo de configuracion
   file_handle = fopen(argv[1], "r");
-
-  char *saveptr;
-  char *paramName, *paramValue;
-  char ipServidor[BUFSIZE], puertoConfig[BUFSIZE];
-
   if(file_handle == NULL)
   {
     printf("Error al abrir el archivo de configuracion.\n");
@@ -54,35 +55,36 @@ int main(int argc, char* argv[]){
   }
   fclose(file_handle);
 
-  struct sockaddr_in cliente; 
-  struct hostent *servidor; 
-  servidor = gethostbyname(chop(ipServidor)); 
-  if(servidor == NULL)
-  { 
-    printf("Host erróneo, ip:%s test", ipServidor);
-    return 1;
+  // Configurar servidor en el host proporcionado
+  servidor = gethostbyname(trimPalabra(ipServidor)); 
+  if(servidor == NULL) { 
+    printf("Host erróneo, ip: %s \n.", ipServidor);
+    return 0;
   }
-  int puerto, conexion;
-  char buffer[100];
-  puerto=(atoi(chop(puertoConfig))); 
-  bzero((char *)&cliente, sizeof((char *)&cliente)); 
 
+  // Configurar cliente en el puerto y servidor configurados
+  puerto=(atoi(trimPalabra(puertoConfig))); 
+  bzero((char *)&cliente, sizeof((char *)&cliente)); 
   cliente.sin_family = AF_INET; 
   cliente.sin_port = htons(puerto); 
   bcopy((char *)servidor->h_addr, (char *)&cliente.sin_addr.s_addr, sizeof(servidor->h_length));
 
-  int r = rand();
+  // Ciclon de solicitudes
   while(1){
     sleep(2);
+
+    // Con el cliente configurado trato de conectar con el servidor
     conexion = socket(AF_INET, SOCK_STREAM, 0); 
     if(connect(conexion,(struct sockaddr *)&cliente, sizeof(cliente)) < 0)
     {
-      printf("Error conectando con el host\n");
+      printf("Error conectando con el host\n.");
       close(conexion);
-      return 1;
+      return 0;
     }
+
+    //Al conectarse es posible enviar y recibir mensajes
     printf("Conectado con %s:%d\n",inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
-    sprintf(buffer, "Hola mi ID es: %d", r);
+    sprintf(buffer, "Hola servidor!");
     send(conexion, buffer, 100, 0); 
     bzero(buffer, 100);
     recv(conexion, buffer, 100, 0);

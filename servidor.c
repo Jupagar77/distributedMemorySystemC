@@ -9,6 +9,9 @@
 #include <pthread.h>
 #include <termios.h>
 
+#define BUFSIZE 1000
+#define PARAMS_NUM 2
+
 int _fCloseThreads, _conexionServidor;
 
 typedef struct {
@@ -17,7 +20,7 @@ typedef struct {
     int port;
 } clienteData;
 
-int getch (void)
+int getCharUsuario (void)
 {
     int ch;
     struct termios oldt, newt;
@@ -75,17 +78,16 @@ void* conectarCliente(){
         if(pthread_create(&thread_cliente, NULL, atenderCliente, args)){
           free(args);
         }
-        //pthread_join(thread_cliente,NULL);
     }
     return NULL;
 }
 
-void* finishProgram()
+void* finalizarPrograma()
 {
     printf("%s", (char*)"Presion 'E' para finalizar.\n");
     int ch;
     do{
-        ch = getch();
+        ch = getCharUsuario();
         if(ch=='E'){
             printf("%s", (char*)"Saliendo...\n");
             _fCloseThreads = 0;
@@ -94,25 +96,56 @@ void* finishProgram()
     } while(1);
 }
 
+char* trimPalabra(char *string)
+{
+    int i, len;
+    len = strlen(string);
+    char *newstring;
+    newstring = (char *)malloc(len-1);
+    for(i = 0; i < strlen(string)-1; i++)
+    {
+        newstring[i] = string[i]; 
+    }
+    return newstring;
+}
+
 
 int main(int argc, char **argv){
-  //https://es.wikibooks.org/wiki/Programaci%C3%B3n_en_C/Sockets
-    
-  // Validar argumentos
-  if(argc<2)
-  {
-    printf("%s <puerto>\n",argv[0]);
-    return 0;
-  }
-
   // Declarar variables
   int puerto; 
   socklen_t longc; 
   struct sockaddr_in servidor, cliente;
   char buffer[100]; 
+  pthread_t thread_arr[2];
+  int iter_id[2];
+  char bufferParams[BUFSIZE], cantidadPaginasConfig[BUFSIZE], puertoConfig[BUFSIZE];
+  char *saveptr, *paramName, *paramValue;
+  FILE* file_handle;
+
+  // Obtener parametros del archivo de configuracion
+  file_handle = fopen(argv[1], "r");
+  if(file_handle == NULL)
+  {
+    printf("Error al abrir el archivo de configuracion.\n");
+    return 1;
+  }
+
+  while(fgets(bufferParams, BUFSIZE - 1, file_handle) != NULL) 
+  {
+    paramName = strtok_r(bufferParams, ":", &saveptr);
+    paramValue = strtok_r(NULL, ":", &saveptr);
+    if (strcmp(paramName, "Puerto") == 0) 
+    {
+      strcpy(puertoConfig, paramValue);
+    } 
+    else if (strcmp(paramName, "CantidadPaginas") == 0) {
+      strcpy(cantidadPaginasConfig, paramValue);
+    }
+  }
+  fclose(file_handle);
   
   // Inizializar variables
-  puerto = atoi(argv[1]);
+  puerto = atoi(trimPalabra(puertoConfig));
   _conexionServidor = socket(AF_INET, SOCK_STREAM, 0);
   bzero((char *)&servidor, sizeof(servidor)); 
   servidor.sin_family = AF_INET;
@@ -127,26 +160,26 @@ int main(int argc, char **argv){
     return 0;
   }
 
-  // Empiece a escuchar
+  // Escuchar
   listen(_conexionServidor, 3); 
   printf("A la escucha en el puerto %d.\n", ntohs(servidor.sin_port));
   
-  pthread_t thread_arr[2];
-  int iter_id[2];
   _fCloseThreads = 1;
-
   for (int iter=0; iter<2; iter++) {
     iter_id[iter] = iter;
     if(iter == 0){
+        // Hilo para atender solicitudes de clientes
         pthread_create(&thread_arr[iter], NULL, conectarCliente, &iter_id[iter]);
     } else{
-        pthread_create(&thread_arr[iter], NULL, finishProgram, &iter_id[iter]);
+        // Hilo para finalizar programa
+        pthread_create(&thread_arr[iter], NULL, finalizarPrograma, &iter_id[iter]);
     }
   }
 
   for (int iter=0;iter<2;iter++) {
     pthread_join(thread_arr[iter],NULL);
   }
+
   close(_conexionServidor);
   return 0;
 }
