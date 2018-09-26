@@ -20,8 +20,13 @@ typedef struct {
     int port;
 } clienteData;
 
-int getCharUsuario (void)
-{
+typedef struct {
+  int id;
+  int version;
+  char* hostOwner;
+} pagina;
+
+int getCharUsuario (void){
     int ch;
     struct termios oldt, newt;
 
@@ -54,7 +59,6 @@ void* atenderCliente(void* clienteDataParam){
   return NULL;
 }
 
-
 void* conectarCliente(){
     struct sockaddr_in cliente;
     socklen_t longc; 
@@ -82,9 +86,8 @@ void* conectarCliente(){
     return NULL;
 }
 
-void* finalizarPrograma()
-{
-    printf("%s", (char*)"Presion 'E' para finalizar.\n");
+void* finalizarPrograma(){
+    printf("%s", (char*)"Presione 'E' para finalizar.\n");
     int ch;
     do{
         ch = getCharUsuario();
@@ -96,8 +99,7 @@ void* finalizarPrograma()
     } while(1);
 }
 
-char* trimPalabra(char *string)
-{
+char* trimPalabra(char *string){
     int i, len;
     len = strlen(string);
     char *newstring;
@@ -109,7 +111,6 @@ char* trimPalabra(char *string)
     return newstring;
 }
 
-
 int main(int argc, char **argv){
   // Declarar variables
   int puerto; 
@@ -117,7 +118,7 @@ int main(int argc, char **argv){
   struct sockaddr_in servidor, cliente;
   char buffer[100]; 
   pthread_t thread_arr[2];
-  int iter_id[2];
+  int iter_id[2], cantidadPaginas;
   char bufferParams[BUFSIZE], cantidadPaginasConfig[BUFSIZE], puertoConfig[BUFSIZE];
   char *saveptr, *paramName, *paramValue;
   FILE* file_handle;
@@ -150,7 +151,21 @@ int main(int argc, char **argv){
   bzero((char *)&servidor, sizeof(servidor)); 
   servidor.sin_family = AF_INET;
   servidor.sin_port = htons(puerto);
-  servidor.sin_addr.s_addr = INADDR_ANY; 
+  servidor.sin_addr.s_addr = INADDR_ANY;
+  cantidadPaginas = atoi(cantidadPaginasConfig);
+  pagina paginas[cantidadPaginas];
+
+  // Inicializar paginas
+  for(int p = 0; p<cantidadPaginas; p++){
+    paginas[p].id = (p+1);
+    paginas[p].version = 0;
+    paginas[p].hostOwner = "127.0.0.1";
+  }
+
+  printf("Se crearon %d paginas.\n", cantidadPaginas);
+  for(int p = 0; p<cantidadPaginas; p++){
+    printf("Pagina #%d en su version %d, actual dueño host: %s \n", paginas[p].id, paginas[p].version, paginas[p].hostOwner);
+  }
 
   // Conectar puerto con servidor
   if(bind(_conexionServidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0)
