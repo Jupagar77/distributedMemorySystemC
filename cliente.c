@@ -177,6 +177,7 @@ int main(int argc, char* argv[]){
           if(strcmp(buffer,"leer") == 0){
             printf("Adquiriendo copia y leyendo pagina #%d en su version %d.\n", paginas[paginaIndice].id, paginas[paginaIndice].version);
             paginas[paginaIndice].copia = true;
+            //Abrir thread para escuchar en caso de que deba matar esta copia.
           } else{
             printf("Debo pedirsela a otro cliente.\n");
           }
