@@ -1,18 +1,16 @@
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<sys/socket.h>
-#include<arpa/inet.h>
-#include<netinet/in.h>
-#include<netdb.h>
-#include<pthread.h>
-#include<termios.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <pthread.h>
+#include <termios.h>
 
 #define BUFSIZE 1000
 #define PARAMS_NUM 2
-
-int _fCloseThreads, _conexionServidor, _puerto;
 
 typedef struct {
     int id;
@@ -24,7 +22,11 @@ typedef struct {
   int id;
   int version;
   char* hostOwner;
+  int puertoOwner;
 } pagina;
+
+int _fCloseThreads, _conexionServidor, _puerto, _puertoGlobal;
+pagina _paginasServer[100];
 
 int getCharUsuario (void){
     int ch;
@@ -43,7 +45,9 @@ int getCharUsuario (void){
 void* atenderCliente(void* clienteDataParam){
   clienteData *data = clienteDataParam;
   char buffer[100];
+  char *saveptr, *accion, *paginaCliente;
 
+  // Recibo data
   if(recv(data->id, buffer, 100, 0) < 0)
   { 
     printf("Conectado con %s:%d.\n", inet_ntoa(data->address),htons(data->port));
@@ -51,11 +55,43 @@ void* atenderCliente(void* clienteDataParam){
     close(_conexionServidor);
     return NULL;
   } else {
-      if(buffer != ""){
+      if(strcmp(buffer,"")){
         printf("Conectado con %s:%d.\n", inet_ntoa(data->address),htons(data->port));
-        printf("%s\n", buffer);
+        
+        //Proceso data
+        accion = strtok_r(buffer, ":", &saveptr);
+        paginaCliente = strtok_r(NULL, ":", &saveptr);
+        printf("El cliente quiere %s la pagina #%d\n", accion, atoi(paginaCliente));
+        
+        // Caso quiere leer
+        if(strcmp(accion,"leer") == 0){
+          //Envio data
+          if(_paginasServer[atoi(paginaCliente)-1].puertoOwner == _puerto &&
+             strcmp(_paginasServer[atoi(paginaCliente)-1].hostOwner, "127.0.0.1") == 0 ){
+            printf("La pagina #%d no ha sido escrita por ningun cliente. Leerla en su version 0.\n", atoi(paginaCliente));
+            send(data->id, "leer", 100, 0);
+          }else{
+            send(data->id, "Pedirsela a otro cliente.", 100, 0);
+          }
+
+        } else{ // Caso quiere escribir
+          if(_paginasServer[atoi(paginaCliente)-1].puertoOwner == _puerto &&
+            strcmp(_paginasServer[atoi(paginaCliente)-1].hostOwner, "127.0.0.1") == 0 ){
+
+            _paginasServer[atoi(paginaCliente)-1].hostOwner = inet_ntoa(data->address);
+            _paginasServer[atoi(paginaCliente)-1].puertoOwner = _puertoGlobal++;
+            printf("La pagina #%d no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.\n", atoi(paginaCliente));
+            printf("Pagina #%d ha cambiando de dueno, host: %s utilizara puerto: %d para atender otros clientes.\n", atoi(paginaCliente),
+              inet_ntoa(data->address), _puertoGlobal);
+            bzero((char *)&buffer, sizeof(buffer));
+            sprintf(buffer, "escribir:%d:%s", _puertoGlobal,inet_ntoa(data->address));
+            send(data->id, buffer, 100, 0);
+          }else{
+            //sprintf(buffer, "pedir:%d:%s", ????,????);
+            send(data->id, "Pedirsela a otro cliente.", 100, 0);
+          }
+        }
         bzero((char *)&buffer, sizeof(buffer));
-        send(data->id, "Recibido.\n", 13, 0);
       }
   }
   free(data);
@@ -69,12 +105,12 @@ void* conectarCliente(){
     longc = sizeof(cliente);
 
     while(_fCloseThreads) {
-        printf("Esperando solicitud de algun cliente.\n");
+        printf("\nEsperando solicitud de algun cliente.\n");
         conexion_cliente = accept(_conexionServidor, (struct sockaddr *)&cliente, &longc); //Espera una conexion
         // Error
         if(conexion_cliente<0)
         {
-          printf("Error al conectar con cliente.\n");
+          printf("\nError al conectar con cliente.\n");
         }
 
         pthread_t thread_cliente;
@@ -173,24 +209,26 @@ int main(int argc, char **argv){
   
   // Inizializar variables
   _puerto = atoi(trimPalabra(puertoConfig));
+  _puertoGlobal = _puerto;
   _conexionServidor = socket(AF_INET, SOCK_STREAM, 0);
   bzero((char *)&servidor, sizeof(servidor)); 
   servidor.sin_family = AF_INET;
   servidor.sin_port = htons(_puerto);
   servidor.sin_addr.s_addr = INADDR_ANY;
   cantidadPaginas = atoi(cantidadPaginasConfig);
-  pagina paginas[cantidadPaginas];
 
   // Inicializar paginas
   for(int p = 0; p<cantidadPaginas; p++){
-    paginas[p].id = (p+1);
-    paginas[p].version = 0;
-    paginas[p].hostOwner = "127.0.0.1";
+    _paginasServer[p].id = (p+1);
+    _paginasServer[p].version = 0;
+    _paginasServer[p].hostOwner = "127.0.0.1";
+    _paginasServer[p].puertoOwner = _puerto;
   }
 
   printf("Se crearon %d paginas.\n", cantidadPaginas);
   for(int p = 0; p<cantidadPaginas; p++){
-    printf("Pagina #%d en su version %d, actual dueño host: %s \n", paginas[p].id, paginas[p].version, paginas[p].hostOwner);
+    printf("Pagina #%d en su version %d, actual dueño host: %s en puerto: %d \n", _paginasServer[p].id, 
+      _paginasServer[p].version, _paginasServer[p].hostOwner, _paginasServer[p].puertoOwner);
   }
 
   // Conectar puerto con servidor
@@ -210,10 +248,10 @@ int main(int argc, char **argv){
     iter_id[iter] = iter;
     if(iter == 0){
         // Hilo para atender solicitudes de clientes
-        pthread_create(&thread_arr[iter], NULL, conectarCliente, &iter_id[iter]);
+        pthread_create(&thread_arr[iter], NULL, finalizarPrograma, &iter_id[iter]);
     } else{
         // Hilo para finalizar programa
-        pthread_create(&thread_arr[iter], NULL, finalizarPrograma, &iter_id[iter]);
+        pthread_create(&thread_arr[iter], NULL, conectarCliente, &iter_id[iter]);
     }
   }
 

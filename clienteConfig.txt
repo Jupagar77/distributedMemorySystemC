@@ -1,5 +1,5 @@
 IPServidor:127.0.0.1
-Puerto:9000
-RangoPaginas:0-10
+Puerto:6001
+RangoPaginas:1-8
 MediaExponencial:3
 PropabilidadLectura:80
