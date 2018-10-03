@@ -112,8 +112,7 @@ int main(int argc, char* argv[]){
     bzero(buffer, 100);
     recv(conexion, buffer, 100, 0);
     printf("%s", buffer);
-
-
+    close(conexion);
   }
   return 0;
 }

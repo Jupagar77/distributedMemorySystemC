@@ -6,13 +6,13 @@
 #include<arpa/inet.h>
 #include<netinet/in.h>
 #include<netdb.h>
-#include <pthread.h>
-#include <termios.h>
+#include<pthread.h>
+#include<termios.h>
 
 #define BUFSIZE 1000
 #define PARAMS_NUM 2
 
-int _fCloseThreads, _conexionServidor;
+int _fCloseThreads, _conexionServidor, _puerto;
 
 typedef struct {
     int id;
@@ -44,16 +44,19 @@ void* atenderCliente(void* clienteDataParam){
   clienteData *data = clienteDataParam;
   char buffer[100];
 
-  printf("Conectando con %s:%d.\n", inet_ntoa(data->address),htons(data->port));
   if(recv(data->id, buffer, 100, 0) < 0)
   { 
+    printf("Conectado con %s:%d.\n", inet_ntoa(data->address),htons(data->port));
     printf("Error al recibir los datos.\n");
     close(_conexionServidor);
     return NULL;
   } else {
-    printf("%s\n", buffer);
-    bzero((char *)&buffer, sizeof(buffer));
-    send(data->id, "Recibido.\n", 13, 0);
+      if(buffer != ""){
+        printf("Conectado con %s:%d.\n", inet_ntoa(data->address),htons(data->port));
+        printf("%s\n", buffer);
+        bzero((char *)&buffer, sizeof(buffer));
+        send(data->id, "Recibido.\n", 13, 0);
+      }
   }
   free(data);
   return NULL;
@@ -92,8 +95,32 @@ void* finalizarPrograma(){
     do{
         ch = getCharUsuario();
         if(ch=='E'){
-            printf("%s", (char*)"Saliendo...\n");
+            printf("%s", (char*)"Exit: terminando procesos.\n");
             _fCloseThreads = 0;
+            /*
+            Crear un cliente "tonto" para matar al servidor 
+            en caso de que nadie haga un request
+            */
+            struct sockaddr_in cliente;
+            struct hostent *servidor; 
+            int conexion;
+
+            // Configurar servidor en el host local
+            servidor = gethostbyname("localhost"); 
+            if(servidor == NULL) { 
+              return 0;
+            }
+
+            // Configurar cliente "tonto" en el puerto y servidor configurados
+            bzero((char *)&cliente, sizeof((char *)&cliente)); 
+            cliente.sin_family = AF_INET; 
+            cliente.sin_port = htons(_puerto); 
+            bcopy((char *)servidor->h_addr, (char *)&cliente.sin_addr.s_addr, sizeof(servidor->h_length));
+
+            //Trato de conectar para matarlo
+            conexion = socket(AF_INET, SOCK_STREAM, 0); 
+            connect(conexion,(struct sockaddr *)&cliente, sizeof(cliente));
+            close(conexion);
             return 0;
         }
     } while(1);
@@ -113,7 +140,6 @@ char* trimPalabra(char *string){
 
 int main(int argc, char **argv){
   // Declarar variables
-  int puerto; 
   socklen_t longc; 
   struct sockaddr_in servidor, cliente;
   char buffer[100]; 
@@ -146,11 +172,11 @@ int main(int argc, char **argv){
   fclose(file_handle);
   
   // Inizializar variables
-  puerto = atoi(trimPalabra(puertoConfig));
+  _puerto = atoi(trimPalabra(puertoConfig));
   _conexionServidor = socket(AF_INET, SOCK_STREAM, 0);
   bzero((char *)&servidor, sizeof(servidor)); 
   servidor.sin_family = AF_INET;
-  servidor.sin_port = htons(puerto);
+  servidor.sin_port = htons(_puerto);
   servidor.sin_addr.s_addr = INADDR_ANY;
   cantidadPaginas = atoi(cantidadPaginasConfig);
   pagina paginas[cantidadPaginas];
