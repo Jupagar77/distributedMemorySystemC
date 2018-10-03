@@ -25,7 +25,7 @@ typedef struct {
   int puertoOwner;
 } pagina;
 
-int _fCloseThreads, _conexionServidor, _puerto, _puertoGlobal;
+int _fCloseThreads, _conexionServidor, _puerto, _puertoGlobal, _cantidadPaginas;
 pagina _paginasServer[100];
 
 int getCharUsuario (void){
@@ -61,7 +61,7 @@ void* atenderCliente(void* clienteDataParam){
         //Proceso data
         accion = strtok_r(buffer, ":", &saveptr);
         paginaCliente = strtok_r(NULL, ":", &saveptr);
-        printf("El cliente quiere %s la pagina #%d\n", accion, atoi(paginaCliente));
+        printf("El cliente quiere %s la pagina #%d.\n", accion, atoi(paginaCliente));
         
         // Caso quiere leer
         if(strcmp(accion,"leer") == 0){
@@ -71,10 +71,11 @@ void* atenderCliente(void* clienteDataParam){
             printf("La pagina #%d no ha sido escrita por ningun cliente. Leerla en su version 0.\n", atoi(paginaCliente));
             send(data->id, "leer", 100, 0);
           }else{
-            send(data->id, "Pedirsela a otro cliente.", 100, 0);
+            printf("La pagina #%d es de otro cliente.\n", atoi(paginaCliente));
+            send(data->id, "Pedirsela a otro cliente.\n", 100, 0);
           }
 
-        } else{ // Caso quiere escribir
+        } else { // Caso quiere escribir
           if(_paginasServer[atoi(paginaCliente)-1].puertoOwner == _puerto &&
             strcmp(_paginasServer[atoi(paginaCliente)-1].hostOwner, "127.0.0.1") == 0 ){
 
@@ -88,10 +89,17 @@ void* atenderCliente(void* clienteDataParam){
             send(data->id, buffer, 100, 0);
           }else{
             //sprintf(buffer, "pedir:%d:%s", ????,????);
-            send(data->id, "Pedirsela a otro cliente.", 100, 0);
+            printf("La pagina #%d es de otro cliente.\n", atoi(paginaCliente));
+            send(data->id, "Pedirsela a otro cliente.\n", 100, 0);
           }
         }
         bzero((char *)&buffer, sizeof(buffer));
+        // Revisar paginas para debug
+        printf("\n");
+        for(int p = 0; p<_cantidadPaginas; p++){
+          printf("Pagina #%d en su version %d, actual dueño host: %s en puerto: %d \n", _paginasServer[p].id, 
+            _paginasServer[p].version, _paginasServer[p].hostOwner, _paginasServer[p].puertoOwner);
+        }
       }
   }
   free(data);
@@ -216,6 +224,7 @@ int main(int argc, char **argv){
   servidor.sin_port = htons(_puerto);
   servidor.sin_addr.s_addr = INADDR_ANY;
   cantidadPaginas = atoi(cantidadPaginasConfig);
+  _cantidadPaginas = cantidadPaginas;
 
   // Inicializar paginas
   for(int p = 0; p<cantidadPaginas; p++){
