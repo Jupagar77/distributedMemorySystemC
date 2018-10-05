@@ -72,7 +72,9 @@ void* atenderCliente(void* clienteDataParam){
             send(data->id, "leer", 100, 0);
           }else{
             printf("La pagina #%d es de otro cliente.\n", atoi(paginaCliente));
-            send(data->id, "Pedirsela a otro cliente.\n", 100, 0);
+            printf("\t El cliente va a pedir la pagina a otro cliente con %s:%d\n",_paginasServer[atoi(paginaCliente)-1].hostOwner,_paginasServer[atoi(paginaCliente)-1].puertoOwner);
+            sprintf(buffer, "pedir:%s:%d", _paginasServer[atoi(paginaCliente)-1].hostOwner,_paginasServer[atoi(paginaCliente)-1].puertoOwner);
+            send(data->id, buffer, 100, 0);
           }
 
         } else { // Caso quiere escribir

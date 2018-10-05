@@ -28,7 +28,14 @@ typedef struct {
   bool dueno;
 } paginaTrabajo;
 
+typedef struct {
+  int idPagina;
+  char* host;
+  int port;
+} clientesConCopias;
+
 paginaTrabajo _paginasTrabajo[100];
+clientesConCopias _clientesConCopias[100];
 
 char* trimPalabra(char *string){
     int i, len;
@@ -244,7 +251,30 @@ int main(int argc, char* argv[]){
             //Abrir thread para escuchar en caso de que deba matar esta copia.
           } else{
             printf("Debo pedirsela a otro cliente.\n");
+            
+            char *saveptrRead, *accion, *puerto, *host;
+            printf("\t----> ***** BUFFER: %s *****\n",buffer);
+            accion = strtok_r(buffer, ":", &saveptrRead);
 
+            if(strcmp(accion,"pedir") == 0){
+              puerto = strtok_r(NULL, ":", &saveptrRead);
+              host = strtok_r(NULL, ":", &saveptrRead);
+              printf("\t----> Debo conectarme con %s:%s para pedirle pagina a leer*****\n",puerto,host);
+              //crear un mini cliente que se conecte con el otro lciente para pedir la copia de la pag
+              //https://es.wikibooks.org/wiki/Programaci%C3%B3n_en_C/Sockets
+              //********
+              struct sockaddr_in clientePedir; //Declaración de la estructura con información para la conexión
+              struct hostent *servidorPedir; //Declaración de la estructura con información del host
+              servidorPedir = gethostbyname(host); //Asignacion
+              if(servidorPedir == NULL)
+              { //Comprobación 
+                printf("Host erróneo\n");
+                return 1;
+              }
+              int puertoPedir, conexionPedir
+              char bufferPedir[100];;
+              //********
+            }
 
 
           }
