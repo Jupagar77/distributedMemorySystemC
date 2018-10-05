@@ -122,11 +122,11 @@ void* serDueno(void* dataPagina) {
       } else {
         printf("Conectado con %s:%d.\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));  
 
-        //if(leer){
+        if(strcmp(buffer,"leer") == 0){
           bzero((char *)&buffer, sizeof(buffer));
-          sprintf(buffer, "%d", _paginasTrabajo[data->indice].version);
+          sprintf(buffer, "version:%d", _paginasTrabajo[data->indice].version);
           send(conexion_cliente, buffer, 100, 0);
-        //}
+        }
       }
 
       //fCloseThreads cuando el servidor me quite el dueno lo cambio a 0
@@ -252,27 +252,72 @@ int main(int argc, char* argv[]){
           } else{
             printf("Debo pedirsela a otro cliente.\n");
             
-            char *saveptrRead, *accion, *puerto, *host;
+            char *saveptrRead, *accion, *puertoObtenido, *hostObtenido;
             printf("\t----> ***** BUFFER: %s *****\n",buffer);
             accion = strtok_r(buffer, ":", &saveptrRead);
 
             if(strcmp(accion,"pedir") == 0){
-              puerto = strtok_r(NULL, ":", &saveptrRead);
-              host = strtok_r(NULL, ":", &saveptrRead);
+              puertoObtenido = strtok_r(NULL, ":", &saveptrRead);
+              hostObtenido = strtok_r(NULL, ":", &saveptrRead);
               printf("\t----> Debo conectarme con %s:%s para pedirle pagina a leer*****\n",puerto,host);
               //crear un mini cliente que se conecte con el otro lciente para pedir la copia de la pag
               //https://es.wikibooks.org/wiki/Programaci%C3%B3n_en_C/Sockets
-              //********
+              
+
+              //******** 
+              //Mini cliente para que se comunique con otro cliente.
               struct sockaddr_in clientePedir; //Declaración de la estructura con información para la conexión
               struct hostent *servidorPedir; //Declaración de la estructura con información del host
-              servidorPedir = gethostbyname(host); //Asignacion
+              servidorPedir = gethostbyname(hostObtenido); //Asignacion
               if(servidorPedir == NULL)
               { //Comprobación 
                 printf("Host erróneo\n");
                 return 1;
               }
               int puertoPedir, conexionPedir
-              char bufferPedir[100];;
+              char bufferPedir[100];
+
+              conexionPedir = socket(AF_INET, SOCK_STREAM, 0); //Asignación del socket
+              puertoPedir=(atoi(puertoObtenido)); //conversion del argumento
+              bzero((char *)&clientePedir, sizeof((char *)&clientePedir)); //Rellena toda la estructura de 0's
+              //La función bzero() es como memset() pero inicializando a 0 todas la variables
+              clientePedir.sin_family = AF_INET; //asignacion del protocolo
+              clientePedir.sin_port = htons(puertoPedir); //asignacion del puerto
+              bcopy((char *)servidor->h_addr, (char *)&cliente.sin_addr.s_addr, sizeof(servidor->h_length));
+              //bcopy(); copia los datos del primer elemendo en el segundo con el tamaño máximo del tercer argumento.
+              
+              //cliente.sin_addr = *((struct in_addr *)servidor->h_addr); //<--para empezar prefiero que se usen
+              //inet_aton(argv[1],&cliente.sin_addr); //<--alguna de estas dos funciones
+              
+              if(connect(conexionPedir,(struct sockaddr *)&clientePedir, sizeof(clientePedir)) < 0)
+              { //conectando con el host
+                printf("Error conectando con el host\n");
+                close(conexionPedir);
+                return 1;
+              }
+              printf("Conectado con %s:%d\n",inet_ntoa(clientePedir.sin_addr),htons(clientePedir.sin_port));
+              //inet_ntoa(); está definida en <arpa/inet.h>
+
+              //le envio al otro cliente 'leer' para que el em mande una copia (version) de la pagina que tiene que es a la que em estoy conectando
+              send(conexionPedir, "leer", 100, 0); //envio
+              bzero(bufferPedir, 100);
+
+              //aqui recibo la version de la copia que pedi al cliente y la agrego al array de la paginas que tengo y pongo la bandera copia entrue y dueno en false
+              recv(conexionPedir, bufferPedir, 100, 0); //recepción
+              char *accionSolicitud,*versionSolicitud;
+              accionSolicitud = strtok_r(buffer, ":", &saveptrRead);
+              versionSolicitud = strtok_r(NULL, ":", &saveptrRead);
+
+              if(strcmp(accionSolicitud,"version")==0){
+                printf("Adquiriendo copia y leyendo pagina #%d en su version %d.\n", _paginasTrabajo[paginaIndice].id,versionSolicitud);
+                _paginasTrabajo[paginaIndice].copia = true;
+                _paginasTrabajo[paginaIndice].dueno = false;
+                _paginasTrabajo[paginaIndice].version = versionSolicitud;
+              }
+              /*
+              
+              */
+              //printf("%s", bufferPedir);
               //********
             }
 
