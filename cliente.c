@@ -10,9 +10,16 @@
 #include <math.h>
 #include <time.h>
 #include <stdbool.h> 
+#include <pthread.h>
+#include <termios.h>
 
 #define BUFSIZE 1000
 #define PARAMS_NUM 5
+
+typedef struct {
+    int puerto;
+    int indice;
+} paginaData;
 
 typedef struct {
   int id;
@@ -20,6 +27,8 @@ typedef struct {
   bool copia;
   bool dueno;
 } paginaTrabajo;
+
+paginaTrabajo _paginasTrabajo[100];
 
 char* trimPalabra(char *string){
     int i, len;
@@ -60,6 +69,62 @@ bool getLeer(int propabilidad){
     return true;
   }
   return false;
+}
+
+void* serDueno(void* dataPagina) {
+  paginaData *data = dataPagina;
+  int puertoAtender = data->puerto;
+  socklen_t longc; 
+  struct sockaddr_in servidor, cliente;
+  char buffer[100]; 
+  int conexionServidor, conexion_cliente, fCloseThreads = 1;
+
+  conexionServidor = socket(AF_INET, SOCK_STREAM, 0);
+  bzero((char *)&servidor, sizeof(servidor));
+  servidor.sin_family = AF_INET;
+  servidor.sin_port = htons(puertoAtender);
+  servidor.sin_addr.s_addr = INADDR_ANY; 
+  // Conectar puerto con servidor
+  if(bind(conexionServidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0)
+  { 
+    printf("ERROR CREANDO MI SERVIDOR DE DUENO! (BORRAR)\n");
+    close(conexionServidor);
+    return 0;
+  }
+  // Escuchar
+  listen(conexionServidor, 3);
+  printf("LISTO PARA DAR COPIAS DE LA PAGINA %d EN EL PUERTO: %d.\n", _paginasTrabajo[data->indice].id, ntohs(servidor.sin_port));
+
+  longc = sizeof(cliente);
+  while(fCloseThreads) {
+      conexion_cliente = accept(conexionServidor, (struct sockaddr *)&cliente, &longc); //Espera una conexion
+      // Error
+      if(conexion_cliente<0)
+      {
+        printf("\nError al conectar con cliente.\n");
+      }
+      char buffer[100];
+  
+      // Recibo data
+      if(recv(conexion_cliente, buffer, 100, 0) < 0)
+      { 
+        printf("Conectado con %s:%d.\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
+        printf("Error al recibir los datos.\n");
+        close(conexionServidor);
+        return NULL;
+      } else {
+        printf("Conectado con %s:%d.\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));  
+
+        //if(leer){
+          bzero((char *)&buffer, sizeof(buffer));
+          sprintf(buffer, "%d", _paginasTrabajo[data->indice].version);
+          send(conexion_cliente, buffer, 100, 0);
+        //}
+      }
+
+      //fCloseThreads cuando el servidor me quite el dueno lo cambio a 0
+  }
+  return NULL;
 }
 
 int main(int argc, char* argv[]){
@@ -126,13 +191,12 @@ int main(int argc, char* argv[]){
   paginaMin = atoi(paginasMin);
   paginaMax = atoi(trimPalabra(paginasMax));
   cantidadPaginas = paginaMax - paginaMin + 1;
-  paginaTrabajo paginas[cantidadPaginas];
   int i = 0;
   for(int p = paginaMin; p<=paginaMax; p++){
-    paginas[i].id = p;
-    paginas[i].version = 0;
-    paginas[i].copia = false;
-    paginas[i].dueno = false;
+    _paginasTrabajo[i].id = p;
+    _paginasTrabajo[i].version = 0;
+    _paginasTrabajo[i].copia = false;
+    _paginasTrabajo[i].dueno = false;
     i++;
   }
 
@@ -149,10 +213,10 @@ int main(int argc, char* argv[]){
       printf("Intentando leer pagina #%d.\n",pagina);
       
       // Caso quiero leer, soy dueno.
-      if(paginas[paginaIndice].dueno){
-        printf("Leyendo mi pagina #%d en su version %d.\n", paginas[paginaIndice].id, paginas[paginaIndice].version);
-      } else if(paginas[paginaIndice].copia){ // Caso quiero leer, no soy dueno pero tengo una copia.
-        printf("Leyendo pagina #%d (copia) en su version %d.\n", paginas[paginaIndice].id, paginas[paginaIndice].version);
+      if(_paginasTrabajo[paginaIndice].dueno){
+        printf("Leyendo mi pagina #%d en su version %d.\n", _paginasTrabajo[paginaIndice].id, _paginasTrabajo[paginaIndice].version);
+      } else if(_paginasTrabajo[paginaIndice].copia){ // Caso quiero leer, no soy dueno pero tengo una copia.
+        printf("Leyendo pagina #%d (copia) en su version %d.\n", _paginasTrabajo[paginaIndice].id, _paginasTrabajo[paginaIndice].version);
       } else { // Caso quiero leer no soy dueno ni tengo copia.
 
           // Con el cliente configurado trato de conectar con el servidor
@@ -168,18 +232,21 @@ int main(int argc, char* argv[]){
           printf("Conectado con el servidor.\n");
 
           // Envio data
-          sprintf(buffer, "leer:%d", paginas[paginaIndice].id);
+          sprintf(buffer, "leer:%d", _paginasTrabajo[paginaIndice].id);
           send(conexion, buffer, 100, 0); 
           bzero(buffer, 100);
 
           // Espero data
           recv(conexion, buffer, 100, 0);
           if(strcmp(buffer,"leer") == 0){
-            printf("Adquiriendo copia y leyendo pagina #%d en su version %d.\n", paginas[paginaIndice].id, paginas[paginaIndice].version);
-            paginas[paginaIndice].copia = true;
+            printf("Adquiriendo copia y leyendo pagina #%d en su version %d.\n", _paginasTrabajo[paginaIndice].id, _paginasTrabajo[paginaIndice].version);
+            _paginasTrabajo[paginaIndice].copia = true;
             //Abrir thread para escuchar en caso de que deba matar esta copia.
           } else{
             printf("Debo pedirsela a otro cliente.\n");
+
+
+
           }
           bzero(buffer, 100);
 
@@ -188,10 +255,10 @@ int main(int argc, char* argv[]){
     }else{
       printf("Intentando escribir pagina #%d.\n",pagina);
       // Caso quiero escribir, soy dueno.
-      if(paginas[paginaIndice].dueno){
-        printf("Escribiendo mi pagina #%d en su version %d, nueva version %d.\n", paginas[paginaIndice].id, 
-          paginas[paginaIndice].version, paginas[paginaIndice].version+1);
-        paginas[paginaIndice].version += 1;
+      if(_paginasTrabajo[paginaIndice].dueno){
+        printf("Escribiendo mi pagina #%d en su version %d, nueva version %d.\n", _paginasTrabajo[paginaIndice].id, 
+          _paginasTrabajo[paginaIndice].version, _paginasTrabajo[paginaIndice].version+1);
+        _paginasTrabajo[paginaIndice].version += 1;
       } else { // Caso quiero escribir pero no soy dueno. 
         // Con el cliente configurado trato de conectar con el servidor
         conexion = socket(AF_INET, SOCK_STREAM, 0); 
@@ -206,25 +273,36 @@ int main(int argc, char* argv[]){
         printf("Conectado con el servidor.\n");
 
         // Envio data
-        sprintf(buffer, "escribir:%d", paginas[paginaIndice].id);
+        sprintf(buffer, "escribir:%d", _paginasTrabajo[paginaIndice].id);
         send(conexion, buffer, 100, 0); 
         bzero(buffer, 100);
 
         // Espero data
         recv(conexion, buffer, 100, 0);
-        char *saveptrRead, *accion, *puerto, *host;
+        char *saveptrRead, *accion, *puertoAtender, *host;
+        long int puertoAtenderInt;
         accion = strtok_r(buffer, ":", &saveptrRead);
-        puerto = strtok_r(NULL, ":", &saveptrRead);
+        puertoAtender = strtok_r(NULL, ":", &saveptrRead);
+        puertoAtenderInt = atoi(puertoAtender);
         host = strtok_r(NULL, ":", &saveptrRead);
+        pthread_t threadAtender;
 
-        if(strcmp(accion,"escribir") == 0){
-          printf("Escribir en pagina #%d, mi puerto de atencion sera %s.\n", paginas[paginaIndice].id,puerto);
+        if(strcmp(accion,"escribir") == 0) {
+
+          printf("Escribir en pagina #%d, mi puerto de atencion sera %ld.\n", _paginasTrabajo[paginaIndice].id, puertoAtenderInt);
           //Abrir thread para escuchar en caso de que otro cliente quiera una copia y asi darle la version.
-          printf("Escribiendo en pagina #%d en su version: %d nueva version: %d.\n", paginas[paginaIndice].id,paginas[paginaIndice].version,
-            paginas[paginaIndice].version+1);
-          paginas[paginaIndice].version += 1;
-          paginas[paginaIndice].dueno = true;
-          paginas[paginaIndice].copia = true;
+          printf("Escribiendo en pagina #%d en su version: %d nueva version: %d.\n", _paginasTrabajo[paginaIndice].id,_paginasTrabajo[paginaIndice].version,
+            _paginasTrabajo[paginaIndice].version+1);
+          _paginasTrabajo[paginaIndice].version += 1;
+          _paginasTrabajo[paginaIndice].dueno = true;
+          _paginasTrabajo[paginaIndice].copia = true;
+
+          paginaData *args = malloc(sizeof *args);
+          args->puerto = puertoAtenderInt;
+          args->indice = paginaIndice;
+          pthread_create(&threadAtender, NULL, serDueno, args);
+          //pthread_join(threadAtender,NULL);
+  
         }
         bzero(buffer, 100);
 

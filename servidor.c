@@ -46,7 +46,7 @@ void* atenderCliente(void* clienteDataParam){
   clienteData *data = clienteDataParam;
   char buffer[100];
   char *saveptr, *accion, *paginaCliente;
-
+  
   // Recibo data
   if(recv(data->id, buffer, 100, 0) < 0)
   { 
@@ -94,12 +94,6 @@ void* atenderCliente(void* clienteDataParam){
           }
         }
         bzero((char *)&buffer, sizeof(buffer));
-        // Revisar paginas para debug
-        printf("\n");
-        for(int p = 0; p<_cantidadPaginas; p++){
-          printf("Pagina #%d en su version %d, actual dueño host: %s en puerto: %d \n", _paginasServer[p].id, 
-            _paginasServer[p].version, _paginasServer[p].hostOwner, _paginasServer[p].puertoOwner);
-        }
       }
   }
   free(data);

@@ -1,2 +1,2 @@
-Puerto:6002
+Puerto:6000
 CantidadPaginas:8
