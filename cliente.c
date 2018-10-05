@@ -378,7 +378,7 @@ int main(int argc, char* argv[]){
         if(strcmp(accion,"escribir") == 0) {
 
           printf("Escribir en pagina #%d, mi puerto de atencion sera %ld.\n", _paginasTrabajo[paginaIndice].id, puertoAtenderInt);
-          //Abrir thread para escuchar en caso de que otro cliente quiera una copia y asi darle la version.
+          //TODO. Abrir thread para escuchar en caso de que otro cliente quiera una copia y asi darle la version.
           printf("Escribiendo en pagina #%d en su version: %d nueva version: %d.\n", _paginasTrabajo[paginaIndice].id,_paginasTrabajo[paginaIndice].version,
             _paginasTrabajo[paginaIndice].version+1);
           _paginasTrabajo[paginaIndice].version += 1;
