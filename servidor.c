@@ -87,12 +87,13 @@ void* atenderCliente(void* clienteDataParam){
             printf("Pagina #%d ha cambiando de dueno, host: %s utilizara puerto: %d para atender otros clientes.\n", atoi(paginaCliente),
               inet_ntoa(data->address), _puertoGlobal);
             bzero((char *)&buffer, sizeof(buffer));
-            sprintf(buffer, "escribir:%d:%s", _puertoGlobal,inet_ntoa(data->address));
+            sprintf(buffer, "escribir:%s:%d",inet_ntoa(data->address),_puertoGlobal);
             send(data->id, buffer, 100, 0);
           }else{
-            //sprintf(buffer, "pedir:%d:%s", ????,????);
             printf("La pagina #%d es de otro cliente.\n", atoi(paginaCliente));
-            send(data->id, "Pedirsela a otro cliente.\n", 100, 0);
+            sprintf(buffer, "pedir:%s:%d", _paginasServer[atoi(paginaCliente)-1].hostOwner,_paginasServer[atoi(paginaCliente)-1].puertoOwner);
+            send(data->id, buffer, 100, 0);
+
           }
         }
         bzero((char *)&buffer, sizeof(buffer));
