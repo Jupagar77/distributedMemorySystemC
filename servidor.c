@@ -23,9 +23,10 @@ typedef struct {
   int version;
   char* hostOwner;
   int puertoOwner;
+  int lock;
 } pagina;
 
-int _fCloseThreads, _conexionServidor, _puerto, _puertoGlobal, _cantidadPaginas;
+int _fCloseThreads, _conexionServidor, _puerto, _puertoGlobal, _cantidadPaginas, __puertoCopiasGlobal = 1024;
 pagina _paginasServer[100];
 
 int getCharUsuario (void){
@@ -61,42 +62,66 @@ void* atenderCliente(void* clienteDataParam){
         //Proceso data
         accion = strtok_r(buffer, ":", &saveptr);
         paginaCliente = strtok_r(NULL, ":", &saveptr);
-        printf("El cliente quiere %s la pagina #%d.\n", accion, atoi(paginaCliente));
+        int paginaClienteInt = atoi(paginaCliente);
+        int paginaClienteIndice = paginaClienteInt-1;
+        printf("El cliente quiere %s la pagina #%d.\n", accion, paginaClienteInt);
         
+        /*for(int p = 0; p<_cantidadPaginas; p++){
+          printf("Pagina #%d en su version %d, actual dueño host: %s en puerto: %d , lock: %d \n", _paginasServer[p].id, 
+            _paginasServer[p].version, _paginasServer[p].hostOwner, _paginasServer[p].puertoOwner, _paginasServer[p].lock);
+        }*/
+
+        int trabajar = 1;
+        while(trabajar){
+          if(_paginasServer[paginaClienteIndice].lock){
+             
+          }else{
+            trabajar = 0;
+          }
+        }
+        _paginasServer[paginaClienteIndice].lock = 1;
+       
         // Caso quiere leer
         if(strcmp(accion,"leer") == 0){
           //Envio data
-          if(_paginasServer[atoi(paginaCliente)-1].puertoOwner == _puerto &&
-             strcmp(_paginasServer[atoi(paginaCliente)-1].hostOwner, "127.0.0.1") == 0 ){
-            printf("La pagina #%d no ha sido escrita por ningun cliente. Leerla en su version 0.\n", atoi(paginaCliente));
+          if(_paginasServer[paginaClienteIndice].puertoOwner == _puerto &&
+             strcmp(_paginasServer[paginaClienteIndice].hostOwner, "127.0.0.1") == 0 ){
+            printf("La pagina #%d no ha sido escrita por ningun cliente. Leerla en su version 0.\n", paginaClienteInt);
             send(data->id, "leer", 100, 0);
           }else{
-            printf("La pagina #%d es de otro cliente.\n", atoi(paginaCliente));
-            printf("\t El cliente va a pedir la pagina a otro cliente con %s:%d\n",_paginasServer[atoi(paginaCliente)-1].hostOwner,_paginasServer[atoi(paginaCliente)-1].puertoOwner);
-            sprintf(buffer, "pedir:%s:%d", _paginasServer[atoi(paginaCliente)-1].hostOwner,_paginasServer[atoi(paginaCliente)-1].puertoOwner);
+            printf("La pagina #%d es de otro cliente.\n", paginaClienteInt);
+            printf("\t El cliente va a pedir la pagina a otro cliente con %s:%d\n",_paginasServer[paginaClienteIndice].hostOwner,_paginasServer[paginaClienteIndice].puertoOwner);
+            sprintf(buffer, "pedir:%s:%d", _paginasServer[paginaClienteIndice].hostOwner,_paginasServer[paginaClienteIndice].puertoOwner);
             send(data->id, buffer, 100, 0);
           }
-
         } else { // Caso quiere escribir
-          if(_paginasServer[atoi(paginaCliente)-1].puertoOwner == _puerto &&
-            strcmp(_paginasServer[atoi(paginaCliente)-1].hostOwner, "127.0.0.1") == 0 ){
+          if(_paginasServer[paginaClienteIndice].puertoOwner == _puerto &&
+            strcmp(_paginasServer[paginaClienteIndice].hostOwner, "127.0.0.1") == 0 ){
 
-            _paginasServer[atoi(paginaCliente)-1].hostOwner = inet_ntoa(data->address);
-            _paginasServer[atoi(paginaCliente)-1].puertoOwner = _puertoGlobal++;
-            printf("La pagina #%d no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.\n", atoi(paginaCliente));
-            printf("Pagina #%d ha cambiando de dueno, host: %s utilizara puerto: %d para atender otros clientes.\n", atoi(paginaCliente),
+            _puertoGlobal += 1;
+            _paginasServer[paginaClienteIndice].hostOwner = inet_ntoa(data->address);
+            _paginasServer[paginaClienteIndice].puertoOwner = _puertoGlobal;
+            
+            printf("La pagina #%d no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.\n", paginaClienteInt);
+            printf("Pagina #%d ha cambiando de dueno, host: %s utilizara puerto: %d para atender otros clientes.\n", paginaClienteInt,
               inet_ntoa(data->address), _puertoGlobal);
+
             bzero((char *)&buffer, sizeof(buffer));
-            sprintf(buffer, "escribir:%s:%d",inet_ntoa(data->address),_puertoGlobal);
-            send(data->id, buffer, 100, 0);
-          }else{
-            printf("La pagina #%d es de otro cliente.\n", atoi(paginaCliente));
-            sprintf(buffer, "pedir:%s:%d", _paginasServer[atoi(paginaCliente)-1].hostOwner,_paginasServer[atoi(paginaCliente)-1].puertoOwner);
+            sprintf(buffer, "escribir:%s:%d:0000",inet_ntoa(data->address),_puertoGlobal);
             send(data->id, buffer, 100, 0);
 
+          } else {
+            _puertoGlobal += 1;
+            printf("La pagina #%d es de otro cliente, pedir en puerto: %d , atender en puerto: %d.\n", paginaClienteInt, _paginasServer[paginaClienteIndice].puertoOwner, _puertoGlobal);
+            bzero((char *)&buffer, sizeof(buffer));
+            sprintf(buffer, "pedir:%s:%d:%d", _paginasServer[paginaClienteIndice].hostOwner, _puertoGlobal,_paginasServer[paginaClienteIndice].puertoOwner);
+            _paginasServer[paginaClienteIndice].hostOwner = inet_ntoa(data->address);
+            _paginasServer[paginaClienteIndice].puertoOwner = _puertoGlobal;
+            send(data->id, buffer, 100, 0);
           }
         }
         bzero((char *)&buffer, sizeof(buffer));
+       _paginasServer[paginaClienteIndice].lock = 0;
       }
   }
   free(data);
@@ -229,6 +254,7 @@ int main(int argc, char **argv){
     _paginasServer[p].version = 0;
     _paginasServer[p].hostOwner = "127.0.0.1";
     _paginasServer[p].puertoOwner = _puerto;
+    _paginasServer[p].lock = 0;
   }
 
   printf("Se crearon %d paginas.\n", cantidadPaginas);

@@ -9,7 +9,6 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include <stdbool.h> 
 #include <pthread.h>
 #include <termios.h>
 
@@ -24,8 +23,8 @@ typedef struct {
 typedef struct {
   int id;
   int version;
-  bool copia;
-  bool dueno;
+  int copia;
+  int dueno;
 } paginaTrabajo;
 
 typedef struct {
@@ -69,13 +68,13 @@ int getPagina(int min, int max){
   return min + rand() % (max+1 - min);
 }
 
-bool getLeer(int propabilidad){
+int getLeer(int propabilidad){
   int random = 0 + rand() % (100+1 - 0);
   srand(time(NULL));
   if(random <= propabilidad){
-    return true;
+    return 1;
   }
-  return false;
+  return 0;
 }
 
 void* serDueno(void* dataPagina) {
@@ -137,8 +136,17 @@ void* serDueno(void* dataPagina) {
             send(conexion_cliente, buffer, 100, 0);
             //borrar mi pagina
             _paginasTrabajo[data->indice].version = 0;
-            _paginasTrabajo[data->indice].dueno = false;
-            _paginasTrabajo[data->indice].copia = false;
+            _paginasTrabajo[data->indice].dueno = 0;
+            _paginasTrabajo[data->indice].copia = 0;
+
+            printf("--- QUITANTO MI PAGINA- ---\n");
+            printf("--- INDICE %d--- \n", data->indice);
+            printf("--- DUENO %d--- \n", _paginasTrabajo[data->indice].dueno);
+
+            fCloseThreads = 0;
+            
+
+
           }
         }
       }
@@ -155,7 +163,7 @@ int main(int argc, char* argv[]){
        lecturaConfig[BUFSIZE];
   int puerto, conexion, pagina, cantidadPaginas, paginaMin, paginaMax,
       paginaIndice;
-  bool leer;
+  int leer;
   char *saveptr, *paramName, *paramValue, *pagMin, *pagMax;
   struct sockaddr_in cliente; 
   struct hostent *servidor; 
@@ -216,14 +224,14 @@ int main(int argc, char* argv[]){
   for(int p = paginaMin; p<=paginaMax; p++){
     _paginasTrabajo[i].id = p;
     _paginasTrabajo[i].version = 0;
-    _paginasTrabajo[i].copia = false;
-    _paginasTrabajo[i].dueno = false;
+    _paginasTrabajo[i].copia = 0;
+    _paginasTrabajo[i].dueno = 0;
     i++;
   }
 
   printf("Voy a esperar %lfs para solicitar cada pagina.\n", mediaExponencial);
   // Ciclo de solicitudes
-  while(true){
+  while(1){
     printf("\n");
     sleep(mediaExponencial);
 
@@ -261,7 +269,7 @@ int main(int argc, char* argv[]){
           recv(conexion, buffer, 100, 0);
           if(strcmp(buffer,"leer") == 0){
             printf("Adquiriendo copia y leyendo pagina #%d en su version %d.\n", _paginasTrabajo[paginaIndice].id, _paginasTrabajo[paginaIndice].version);
-            _paginasTrabajo[paginaIndice].copia = true;
+            _paginasTrabajo[paginaIndice].copia = 1;
             //Abrir thread para escuchar en caso de que deba matar esta copia.
           } else{
             printf("Debo pedirsela a otro cliente.\n");
@@ -316,7 +324,7 @@ int main(int argc, char* argv[]){
               send(conexionPedir, "leer", 100, 0); //envio
               bzero(bufferPedir, 100);
 
-              //aqui recibo la version de la copia que pedi al cliente y la agrego al array de la paginas que tengo y pongo la bandera copia entrue y dueno en false
+              //aqui recibo la version de la copia que pedi al cliente y la agrego al array de la paginas que tengo y pongo la bandera copia en1 y dueno en 0
               recv(conexionPedir, bufferPedir, 100, 0); //recepción
               printf("\tBUFFER de version obtenida: %s\n",bufferPedir);
               char *accionSolicitud,*versionSolicitud, *saveptrReadPedir;
@@ -325,8 +333,8 @@ int main(int argc, char* argv[]){
 
               if(strcmp(accionSolicitud,"version")==0){
                 printf("Adquiriendo copia y leyendo pagina #%d en su version %d.\n", _paginasTrabajo[paginaIndice].id,atoi(versionSolicitud));
-                _paginasTrabajo[paginaIndice].copia = true;
-                _paginasTrabajo[paginaIndice].dueno = false;
+                _paginasTrabajo[paginaIndice].copia = 1;
+                _paginasTrabajo[paginaIndice].dueno = 0;
                 _paginasTrabajo[paginaIndice].version = atoi(versionSolicitud);
               }
               /*
@@ -344,6 +352,12 @@ int main(int argc, char* argv[]){
         }    
     }else{
       printf("Intentando escribir pagina #%d.\n",pagina);
+
+      printf("--- AYUDA!!- ---\n");
+            printf("--- INDICE %d--- \n", paginaIndice);
+            printf("--- DUENO %d--- \n", _paginasTrabajo[paginaIndice].dueno);
+
+
       // Caso quiero escribir, soy dueno.
       if(_paginasTrabajo[paginaIndice].dueno){
         printf("Escribiendo mi pagina #%d en su version %d, nueva version %d.\n", _paginasTrabajo[paginaIndice].id, 
@@ -367,15 +381,18 @@ int main(int argc, char* argv[]){
         send(conexion, buffer, 100, 0); 
         bzero(buffer, 100);
 
+         printf("envie.\n");
+
         // Espero data
         recv(conexion, buffer, 100, 0);
-        char *saveptrRead, *accion, *puertoAtender, *host;
-        long int puertoAtenderInt;
+        char *saveptrRead, *accion, *puertoAtender, *host, *puertoPedir;
+        long int puertoAtenderInt, puertoPedirInt;
         accion = strtok_r(buffer, ":", &saveptrRead);
         host = strtok_r(NULL, ":", &saveptrRead);
         puertoAtender = strtok_r(NULL, ":", &saveptrRead);
+        puertoPedir = strtok_r(NULL, ":", &saveptrRead);
         puertoAtenderInt = atoi(puertoAtender);
-
+        puertoPedirInt = atoi(puertoPedir);
         pthread_t threadAtender;
 
         if(strcmp(accion,"escribir") == 0) {
@@ -385,8 +402,8 @@ int main(int argc, char* argv[]){
           printf("Escribiendo en pagina #%d en su version: %d nueva version: %d.\n", _paginasTrabajo[paginaIndice].id,_paginasTrabajo[paginaIndice].version,
             _paginasTrabajo[paginaIndice].version+1);
           _paginasTrabajo[paginaIndice].version += 1;
-          _paginasTrabajo[paginaIndice].dueno = true;
-          _paginasTrabajo[paginaIndice].copia = true;
+          _paginasTrabajo[paginaIndice].dueno = 1;
+          _paginasTrabajo[paginaIndice].copia = 1;
 
           paginaData *args = malloc(sizeof *args);
           args->puerto = puertoAtenderInt;
@@ -394,7 +411,7 @@ int main(int argc, char* argv[]){
           pthread_create(&threadAtender, NULL, serDueno, args);
           //pthread_join(threadAtender,NULL);
   
-        }else{
+        } else {
 
           if(strcmp(accion,"pedir")==0){
 
@@ -408,15 +425,14 @@ int main(int argc, char* argv[]){
               printf("Host erróneo\n");
               return 1;
             }
-            int puertoPedir, conexionPedir;
+            int conexionPedir;
             char bufferPedir[100];
 
-            conexionPedir = socket(AF_INET, SOCK_STREAM, 0); //Asignación del socket
-            puertoPedir=puertoAtenderInt; //conversion del argumento
+            conexionPedir = socket(AF_INET, SOCK_STREAM, 0); //Asignación del socket       
             bzero((char *)&clientePedir, sizeof((char *)&clientePedir)); //Rellena toda la estructura de 0's
             //La función bzero() es como memset() pero inicializando a 0 todas la variables
             clientePedir.sin_family = AF_INET; //asignacion del protocolo
-            clientePedir.sin_port = htons(puertoPedir); //asignacion del puerto
+            clientePedir.sin_port = htons(puertoPedirInt); //asignacion del puerto
             bcopy((char *)servidor->h_addr, (char *)&cliente.sin_addr.s_addr, sizeof(servidor->h_length));
             //bcopy(); copia los datos del primer elemendo en el segundo con el tamaño máximo del tercer argumento.
             
@@ -425,7 +441,7 @@ int main(int argc, char* argv[]){
             
             if(connect(conexionPedir,(struct sockaddr *)&clientePedir, sizeof(clientePedir)) < 0)
             { //conectando con el host
-              printf("Error conectando con el host\n");
+              printf("Error conectando con el host, puerto %ld \n.", puertoAtenderInt);
               close(conexionPedir);
               return 1;
             }
@@ -436,7 +452,7 @@ int main(int argc, char* argv[]){
             send(conexionPedir, "escribir", 100, 0); //envio
             bzero(bufferPedir, 100);
 
-            //aqui recibo la version de la copia que pedi al cliente y la agrego al array de la paginas que tengo y pongo la bandera copia entrue y dueno en false
+            //aqui recibo la version de la copia que pedi al cliente y la agrego al array de la paginas que tengo y pongo la bandera copia en1 y dueno en 0
             recv(conexionPedir, bufferPedir, 100, 0); //recepción
                           printf("BUFFER de solicitud pedir escribir: %s\n",bufferPedir);
             char *accionSolicitud,*versionSolicitud, *saveptrReadPedir;
@@ -445,16 +461,16 @@ int main(int argc, char* argv[]){
 
             if(strcmp(accionSolicitud,"version")==0){
               printf("Escribiendo en pagina #%d en su version: %s nueva version: %d.\n", _paginasTrabajo[paginaIndice].id,versionSolicitud,atoi(versionSolicitud)+1);
-              _paginasTrabajo[paginaIndice].copia = false;
-              _paginasTrabajo[paginaIndice].dueno = true;
+              _paginasTrabajo[paginaIndice].copia = 1;
+              _paginasTrabajo[paginaIndice].dueno = 1;
               _paginasTrabajo[paginaIndice].version = atoi(versionSolicitud) +1;
             }
-            /*
-            
-            */
-            //printf("%s", bufferPedir);
-            //********
 
+            paginaData *args = malloc(sizeof *args);
+            args->puerto = puertoAtenderInt;
+            args->indice = paginaIndice;
+            pthread_create(&threadAtender, NULL, serDueno, args);
+    
           }
 
         }
