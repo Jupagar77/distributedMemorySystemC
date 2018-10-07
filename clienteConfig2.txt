@@ -1,5 +1,5 @@
 IPServidor:127.0.0.1
 Puerto:6090
-RangoPaginas:1-3
+RangoPaginas:2-4
 MediaExponencial:3
-PropabilidadLectura:50
+PropabilidadLectura:80

@@ -20,21 +20,23 @@ typedef struct {
     int indice;
 } paginaData;
 
-typedef struct {
-  int id;
-  int version;
-  int copia;
-  int dueno;
+typedef struct {  
+  char* host;  
+  int port;
+} clienteConCopia;
+
+typedef struct {  
+  int id;  
+  int version;  
+  int copia;  
+  int dueno;  
+  clienteConCopia* clientes[300];  
+  int cantClientes;
 } paginaTrabajo;
 
-typedef struct {
-  int idPagina;
-  char* host;
-  int port;
-} clientesConCopias;
-
 paginaTrabajo _paginasTrabajo[100];
-clientesConCopias _clientesConCopias[100];
+
+int _morirProceso = 1;
 
 char* trimPalabra(char *string){
     int i, len;
@@ -57,8 +59,8 @@ float calcularMedia(float valor){
   /*
     Si da menor a 1 crashea el servidor
   */
-  if(result < 1){
-    result = 1.0;
+  if(result < 2){
+    result = 2.4534;
   }
   return result;
 }
@@ -77,6 +79,43 @@ int getLeer(int propabilidad){
   return 0;
 }
 
+void* clienteBorreCopia(char* host, int port){
+  struct sockaddr_in clientePedir; //Declaración de la estructura con información para la conexión
+  struct hostent *servidorPedir; //Declaración de la estructura con información del host
+  servidorPedir = gethostbyname(host); //Asignacion
+  if(servidorPedir == NULL)
+  { //Comprobación 
+    printf("Host erróneo.\n");
+    return NULL;
+  }
+  int conexionPedir;
+  char bufferPedir[100];
+
+  conexionPedir = socket(AF_INET, SOCK_STREAM, 0); //Asignación del socket       
+  bzero((char *)&clientePedir, sizeof((char *)&clientePedir)); //Rellena toda la estructura de 0's
+  //La función bzero() es como memset() pero inicializando a 0 todas la variables
+  clientePedir.sin_family = AF_INET; //asignacion del protocolo
+  clientePedir.sin_port = htons(port); //asignacion del puerto
+  bcopy((char *)servidorPedir->h_addr, (char *)&clientePedir.sin_addr.s_addr, sizeof(servidorPedir->h_length));
+  //bcopy(); copia los datos del primer elemendo en el segundo con el tamaño máximo del tercer argumento.
+            
+  //cliente.sin_addr = *((struct in_addr *)servidor->h_addr); //<--para empezar prefiero que se usen
+  //inet_aton(argv[1],&cliente.sin_addr); //<--alguna de estas dos funciones
+            
+  if(connect(conexionPedir,(struct sockaddr *)&clientePedir, sizeof(clientePedir)) < 0)
+  { //conectando con el host
+    printf("Error conectando con el host, puerto %d .\n", port);
+    close(conexionPedir);
+    return NULL;
+  }
+  printf("Conectado con %s:%d .\n",inet_ntoa(clientePedir.sin_addr),htons(clientePedir.sin_port));
+  //inet_ntoa(); está definida en <arpa/inet.h>
+
+  //le envio al otro cliente 'leer' para que el em mande una copia (version) de la pagina que tiene que es a la que em estoy conectando
+  send(conexionPedir, "borrar", 100, 0); //envio
+  bzero(bufferPedir, 100);
+}
+
 void* serDueno(void* dataPagina) {
   paginaData *data = dataPagina;
   int puertoAtender = data->puerto;
@@ -93,14 +132,13 @@ void* serDueno(void* dataPagina) {
   // Conectar puerto con servidor
   if(bind(conexionServidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0)
   { 
-    printf("ERROR CREANDO MI SERVIDOR DE DUENO! (BORRAR)\n");
+    printf("Error creando servidor de dueno en puerto %d .\n", puertoAtender);
     close(conexionServidor);
     return 0;
   }
   // Escuchar
   listen(conexionServidor, 3);
-  printf("LISTO PARA DAR COPIAS DE LA PAGINA %d EN EL PUERTO: %d.\n", _paginasTrabajo[data->indice].id, ntohs(servidor.sin_port));
-
+ 
   longc = sizeof(cliente);
   while(fCloseThreads) {
       conexion_cliente = accept(conexionServidor, (struct sockaddr *)&cliente, &longc); //Espera una conexion
@@ -120,39 +158,103 @@ void* serDueno(void* dataPagina) {
         return NULL;
       } else {
         printf("Conectado con %s:%d.\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));  
+        char *saveptr, *accion, *paginaCliente, *puertoMatar;
+        accion = strtok_r(buffer, ":", &saveptr);
+        puertoMatar = strtok_r(NULL, ":", &saveptr);
+        if(strcmp(accion,"leer") == 0){
+          //meter ese cliente a la lista de los clientes que tienen esta copia          
+          clienteConCopia *args = malloc(sizeof *args);
+          args->host = inet_ntoa(cliente.sin_addr);
+          args->port = atoi(puertoMatar);
 
-        if(strcmp(buffer,"leer") == 0){
-                  printf("--- DENTRO DE CASO MINI SERVIDOR -LEER- ---\n");
+          _paginasTrabajo[data->indice].clientes[_paginasTrabajo[data->indice].cantClientes] = args;   
+          _paginasTrabajo[data->indice].cantClientes++; 
           bzero((char *)&buffer, sizeof(buffer));
           sprintf(buffer, "version:%d", _paginasTrabajo[data->indice].version);
           send(conexion_cliente, buffer, 100, 0);
-        }else{
-          if(strcmp(buffer,"escribir") == 0){
-            printf("--- DENTRO DE CASO MINI SERVIDOR -ESCRIBIR- ---\n");
-            //TODO. Avisarle a todas los clientes que tienen una copia de mi pagina que la borren
-            //cederle al cliente que pidio la pagina la version para que el cliente la escriba y le sume una posicion a la version
+        } else {
+          if(strcmp(accion,"escribir") == 0){   
+              for(int p = 0; p < _paginasTrabajo[data->indice].cantClientes; p++){
+                  printf("El cliente %s:%d debe borrar su copia. \n", _paginasTrabajo[data->indice].clientes[p]->host,
+                  _paginasTrabajo[data->indice].clientes[p]->port);
+                
+                clienteBorreCopia(
+                  _paginasTrabajo[data->indice].clientes[p]->host,
+                  _paginasTrabajo[data->indice].clientes[p]->port
+                  );
+              }
+              memset(_paginasTrabajo[data->indice].clientes, 0, sizeof(_paginasTrabajo[data->indice].clientes));
+              _paginasTrabajo[data->indice].cantClientes = 0;
+
+              //cederle al cliente que pidio la pagina la version para que el cliente la escriba y le sume una posicion a la version
+              bzero((char *)&buffer, sizeof(buffer));
+              sprintf(buffer, "version:%d", _paginasTrabajo[data->indice].version);
+              send(conexion_cliente, buffer, 100, 0);
+              //borrar mi pagina
+              _paginasTrabajo[data->indice].version = 0;
+              _paginasTrabajo[data->indice].dueno = 0;
+              _paginasTrabajo[data->indice].copia = 0;
+              fCloseThreads = 0;
+          } else{
+            //Debo morir
             bzero((char *)&buffer, sizeof(buffer));
-            sprintf(buffer, "version:%d", _paginasTrabajo[data->indice].version);
+            sprintf(buffer, "%d", _paginasTrabajo[data->indice].version);
             send(conexion_cliente, buffer, 100, 0);
-            //borrar mi pagina
-            _paginasTrabajo[data->indice].version = 0;
-            _paginasTrabajo[data->indice].dueno = 0;
-            _paginasTrabajo[data->indice].copia = 0;
-
-            printf("--- QUITANTO MI PAGINA- ---\n");
-            printf("--- INDICE %d--- \n", data->indice);
-            printf("--- DUENO %d--- \n", _paginasTrabajo[data->indice].dueno);
-
             fCloseThreads = 0;
-            
-
-
+            _morirProceso = 0;
           }
         }
       }
-
-      //fCloseThreads cuando el servidor me quite el dueno lo cambio a 0
   }
+  close(conexionServidor);
+  return NULL;
+}
+
+void* borrarCopia(void* dataPagina) {
+  paginaData *data = dataPagina;
+  int puertoAtender = data->puerto;
+  socklen_t longc; 
+  struct sockaddr_in servidor, cliente;
+  char buffer[100]; 
+  int conexionServidor, conexion_cliente;
+
+  conexionServidor = socket(AF_INET, SOCK_STREAM, 0);
+  bzero((char *)&servidor, sizeof(servidor));
+  servidor.sin_family = AF_INET;
+  servidor.sin_port = htons(puertoAtender);
+  servidor.sin_addr.s_addr = INADDR_ANY; 
+  // Conectar puerto con servidor
+  if(bind(conexionServidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0)
+  { 
+    printf("Error creando servidor de copia.\n");
+    close(conexionServidor);
+    return 0;
+  }
+  // Escuchar
+  listen(conexionServidor, 3);
+  
+  longc = sizeof(cliente);
+  conexion_cliente = accept(conexionServidor, (struct sockaddr *)&cliente, &longc); //Espera una conexion
+  // Error
+  if(conexion_cliente<0)
+  {
+      printf("\nError al conectar con cliente.\n");
+  }
+  
+  // Recibo data
+  if(recv(conexion_cliente, buffer, 100, 0) < 0)
+    { 
+      printf("Conectado con %s:%d.\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));
+      printf("Error al recibir los datos.\n");
+      close(conexionServidor);
+      return NULL;
+    } else {
+      printf("Conectado con %s:%d.\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));  
+      _paginasTrabajo[data->indice].version = 0;
+      _paginasTrabajo[data->indice].dueno = 0;
+      _paginasTrabajo[data->indice].copia = 0;
+    }
+  close(conexionServidor);
   return NULL;
 }
 
@@ -231,7 +333,7 @@ int main(int argc, char* argv[]){
 
   printf("Voy a esperar %lfs para solicitar cada pagina.\n", mediaExponencial);
   // Ciclo de solicitudes
-  while(1){
+  while(_morirProceso){
     printf("\n");
     sleep(mediaExponencial);
 
@@ -267,21 +369,19 @@ int main(int argc, char* argv[]){
 
           // Espero data
           recv(conexion, buffer, 100, 0);
-          if(strcmp(buffer,"leer") == 0){
+          char *saveptrRead, *accion, *puertoObtenido, *hostObtenido, *puertoMatarCopia;
+          accion = strtok_r(buffer, ":", &saveptrRead);
+          hostObtenido = strtok_r(NULL, ":", &saveptrRead);
+          puertoObtenido = strtok_r(NULL, ":", &saveptrRead);
+          puertoMatarCopia = strtok_r(NULL, ":", &saveptrRead);
+
+          if(strcmp(accion,"leer") == 0) {
             printf("Adquiriendo copia y leyendo pagina #%d en su version %d.\n", _paginasTrabajo[paginaIndice].id, _paginasTrabajo[paginaIndice].version);
             _paginasTrabajo[paginaIndice].copia = 1;
-            //Abrir thread para escuchar en caso de que deba matar esta copia.
-          } else{
-            printf("Debo pedirsela a otro cliente.\n");
-            
-            char *saveptrRead, *accion, *puertoObtenido, *hostObtenido;
-            printf("\t----> ***** BUFFER: %s *****\n",buffer);
-            accion = strtok_r(buffer, ":", &saveptrRead);
-            
+          } else {
+            printf("Debo pedirsela a otro cliente %s.\n", accion);
             if(strcmp(accion,"pedir") == 0){  
-              hostObtenido = strtok_r(NULL, ":", &saveptrRead);
-              puertoObtenido = strtok_r(NULL, ":", &saveptrRead);
-              printf("Debo conectarme con %s:%s para pedirle pagina a leer\n",hostObtenido,puertoObtenido);
+              printf("Debo conectarme con %s:%s para pedirle pagina a leer.\n",hostObtenido,puertoObtenido);
               //crear un mini cliente que se conecte con el otro lciente para pedir la copia de la pag
               //https://es.wikibooks.org/wiki/Programaci%C3%B3n_en_C/Sockets
               
@@ -293,7 +393,7 @@ int main(int argc, char* argv[]){
               servidorPedir = gethostbyname(hostObtenido); //Asignacion
               if(servidorPedir == NULL)
               { //Comprobación 
-                printf("Host erróneo\n");
+                printf("Host erróneo.\n");
                 return 1;
               }
               int puertoPedir, conexionPedir;
@@ -305,7 +405,7 @@ int main(int argc, char* argv[]){
               //La función bzero() es como memset() pero inicializando a 0 todas la variables
               clientePedir.sin_family = AF_INET; //asignacion del protocolo
               clientePedir.sin_port = htons(puertoPedir); //asignacion del puerto
-              bcopy((char *)servidor->h_addr, (char *)&cliente.sin_addr.s_addr, sizeof(servidor->h_length));
+              bcopy((char *)servidorPedir->h_addr, (char *)&clientePedir.sin_addr.s_addr, sizeof(servidorPedir->h_length));
               //bcopy(); copia los datos del primer elemendo en el segundo con el tamaño máximo del tercer argumento.
               
               //cliente.sin_addr = *((struct in_addr *)servidor->h_addr); //<--para empezar prefiero que se usen
@@ -313,7 +413,7 @@ int main(int argc, char* argv[]){
               
               if(connect(conexionPedir,(struct sockaddr *)&clientePedir, sizeof(clientePedir)) < 0)
               { //conectando con el host
-                printf("Error conectando con el host\n");
+                printf("Error conectando con el host.\n");
                 close(conexionPedir);
                 return 1;
               }
@@ -321,12 +421,13 @@ int main(int argc, char* argv[]){
               //inet_ntoa(); está definida en <arpa/inet.h>
 
               //le envio al otro cliente 'leer' para que el em mande una copia (version) de la pagina que tiene que es a la que em estoy conectando
-              send(conexionPedir, "leer", 100, 0); //envio
+              bzero((char *)&bufferPedir, sizeof(bufferPedir));
+              sprintf(bufferPedir, "leer:%s",puertoMatarCopia);
+              send(conexionPedir, bufferPedir, 100, 0); //envio
               bzero(bufferPedir, 100);
 
               //aqui recibo la version de la copia que pedi al cliente y la agrego al array de la paginas que tengo y pongo la bandera copia en1 y dueno en 0
               recv(conexionPedir, bufferPedir, 100, 0); //recepción
-              printf("\tBUFFER de version obtenida: %s\n",bufferPedir);
               char *accionSolicitud,*versionSolicitud, *saveptrReadPedir;
               accionSolicitud = strtok_r(bufferPedir, ":", &saveptrReadPedir);
               versionSolicitud = strtok_r(NULL, ":", &saveptrReadPedir);
@@ -337,32 +438,33 @@ int main(int argc, char* argv[]){
                 _paginasTrabajo[paginaIndice].dueno = 0;
                 _paginasTrabajo[paginaIndice].version = atoi(versionSolicitud);
               }
-              /*
-              
-              */
-              //printf("%s", bufferPedir);
-              //********
             }
-
-
           }
-          bzero(buffer, 100);
+          pthread_t threadBorrarCopia;
+          paginaData *args = malloc(sizeof *args);
+          args->puerto = atoi(puertoMatarCopia);
+          args->indice = paginaIndice;
+          pthread_create(&threadBorrarCopia, NULL, borrarCopia, args);
 
+          bzero(buffer, 100);
           close(conexion);
         }    
-    }else{
-      printf("Intentando escribir pagina #%d.\n",pagina);
-
-      printf("--- AYUDA!!- ---\n");
-            printf("--- INDICE %d--- \n", paginaIndice);
-            printf("--- DUENO %d--- \n", _paginasTrabajo[paginaIndice].dueno);
-
-
+    } else {
+      printf("Intentando escribir pagina #%d .\n",pagina);
       // Caso quiero escribir, soy dueno.
       if(_paginasTrabajo[paginaIndice].dueno){
-        printf("Escribiendo mi pagina #%d en su version %d, nueva version %d.\n", _paginasTrabajo[paginaIndice].id, 
+        printf("Escribiendo mi pagina #%d en su version %d, nueva version %d .\n", _paginasTrabajo[paginaIndice].id, 
           _paginasTrabajo[paginaIndice].version, _paginasTrabajo[paginaIndice].version+1);
         _paginasTrabajo[paginaIndice].version += 1;
+
+        for(int p = 0; p < _paginasTrabajo[paginaIndice].cantClientes; p++){
+          printf("El cliente %s:%d debe borrar su copia. \n", _paginasTrabajo[paginaIndice].clientes[p]->host,
+            _paginasTrabajo[paginaIndice].clientes[p]->port);
+          clienteBorreCopia(_paginasTrabajo[paginaIndice].clientes[p]->host,_paginasTrabajo[paginaIndice].clientes[p]->port);
+        }
+        memset(_paginasTrabajo[paginaIndice].clientes, 0, sizeof(_paginasTrabajo[paginaIndice].clientes));
+        _paginasTrabajo[paginaIndice].cantClientes = 0;
+
       } else { // Caso quiero escribir pero no soy dueno. 
         // Con el cliente configurado trato de conectar con el servidor
         conexion = socket(AF_INET, SOCK_STREAM, 0); 
@@ -381,8 +483,6 @@ int main(int argc, char* argv[]){
         send(conexion, buffer, 100, 0); 
         bzero(buffer, 100);
 
-         printf("envie.\n");
-
         // Espero data
         recv(conexion, buffer, 100, 0);
         char *saveptrRead, *accion, *puertoAtender, *host, *puertoPedir;
@@ -397,9 +497,8 @@ int main(int argc, char* argv[]){
 
         if(strcmp(accion,"escribir") == 0) {
 
-          printf("Escribir en pagina #%d, mi puerto de atencion sera %ld.\n", _paginasTrabajo[paginaIndice].id, puertoAtenderInt);
-          //TODO. Abrir thread para escuchar en caso de que otro cliente quiera una copia y asi darle la version.
-          printf("Escribiendo en pagina #%d en su version: %d nueva version: %d.\n", _paginasTrabajo[paginaIndice].id,_paginasTrabajo[paginaIndice].version,
+          printf("Escribir en pagina #%d, mi puerto de atencion sera %ld .\n", _paginasTrabajo[paginaIndice].id, puertoAtenderInt);
+          printf("Escribiendo en pagina #%d en su version: %d nueva version: %d .\n", _paginasTrabajo[paginaIndice].id,_paginasTrabajo[paginaIndice].version,
             _paginasTrabajo[paginaIndice].version+1);
           _paginasTrabajo[paginaIndice].version += 1;
           _paginasTrabajo[paginaIndice].dueno = 1;
@@ -422,7 +521,7 @@ int main(int argc, char* argv[]){
             servidorPedir = gethostbyname(host); //Asignacion
             if(servidorPedir == NULL)
             { //Comprobación 
-              printf("Host erróneo\n");
+              printf("Host erróneo.\n");
               return 1;
             }
             int conexionPedir;
@@ -441,7 +540,7 @@ int main(int argc, char* argv[]){
             
             if(connect(conexionPedir,(struct sockaddr *)&clientePedir, sizeof(clientePedir)) < 0)
             { //conectando con el host
-              printf("Error conectando con el host, puerto %ld \n.", puertoAtenderInt);
+              printf("Error conectando con el host, puerto %ld .\n", puertoAtenderInt);
               close(conexionPedir);
               return 1;
             }
@@ -449,18 +548,17 @@ int main(int argc, char* argv[]){
             //inet_ntoa(); está definida en <arpa/inet.h>
 
             //le envio al otro cliente 'leer' para que el em mande una copia (version) de la pagina que tiene que es a la que em estoy conectando
-            send(conexionPedir, "escribir", 100, 0); //envio
+            send(conexionPedir, "escribir:0", 100, 0); //envio
             bzero(bufferPedir, 100);
 
             //aqui recibo la version de la copia que pedi al cliente y la agrego al array de la paginas que tengo y pongo la bandera copia en1 y dueno en 0
             recv(conexionPedir, bufferPedir, 100, 0); //recepción
-                          printf("BUFFER de solicitud pedir escribir: %s\n",bufferPedir);
             char *accionSolicitud,*versionSolicitud, *saveptrReadPedir;
             accionSolicitud = strtok_r(bufferPedir, ":", &saveptrReadPedir);
             versionSolicitud = strtok_r(NULL, ":", &saveptrReadPedir);
 
             if(strcmp(accionSolicitud,"version")==0){
-              printf("Escribiendo en pagina #%d en su version: %s nueva version: %d.\n", _paginasTrabajo[paginaIndice].id,versionSolicitud,atoi(versionSolicitud)+1);
+              printf("Escribiendo en pagina #%d en su version: %s nueva version: %d .\n", _paginasTrabajo[paginaIndice].id,versionSolicitud,atoi(versionSolicitud)+1);
               _paginasTrabajo[paginaIndice].copia = 1;
               _paginasTrabajo[paginaIndice].dueno = 1;
               _paginasTrabajo[paginaIndice].version = atoi(versionSolicitud) +1;

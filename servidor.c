@@ -12,6 +12,11 @@
 #define BUFSIZE 1000
 #define PARAMS_NUM 2
 
+typedef struct {  
+  char* host;  
+  int port;
+} clienteConCopia;
+
 typedef struct {
     int id;
     struct in_addr address;
@@ -24,9 +29,11 @@ typedef struct {
   char* hostOwner;
   int puertoOwner;
   int lock;
+  clienteConCopia* clientes[300];  
+  int cantClientes;
 } pagina;
 
-int _fCloseThreads, _conexionServidor, _puerto, _puertoGlobal, _cantidadPaginas, __puertoCopiasGlobal = 1024;
+int _fCloseThreads, _conexionServidor, _puerto, _puertoGlobal, _cantidadPaginas, _puertoCopiasGlobal = 2000;
 pagina _paginasServer[100];
 
 int getCharUsuario (void){
@@ -41,6 +48,39 @@ int getCharUsuario (void){
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
     return ch;
+}
+
+void* clienteBorreCopia(char* host, int port){
+  struct sockaddr_in clientePedir; //Declaración de la estructura con información para la conexión
+  struct hostent *servidorPedir; //Declaración de la estructura con información del host
+  servidorPedir = gethostbyname(host); //Asignacion
+  if(servidorPedir == NULL)
+  { //Comprobación 
+    printf("Host erróneo\n");
+    return NULL;
+  }
+  int conexionPedir;
+  char bufferPedir[100];
+
+  conexionPedir = socket(AF_INET, SOCK_STREAM, 0); //Asignación del socket       
+  bzero((char *)&clientePedir, sizeof((char *)&clientePedir)); //Rellena toda la estructura de 0's
+  //La función bzero() es como memset() pero inicializando a 0 todas la variables
+  clientePedir.sin_family = AF_INET; //asignacion del protocolo
+  clientePedir.sin_port = htons(port); //asignacion del puerto
+  bcopy((char *)servidorPedir->h_addr, (char *)&clientePedir.sin_addr.s_addr, sizeof(servidorPedir->h_length));
+             
+  if(connect(conexionPedir,(struct sockaddr *)&clientePedir, sizeof(clientePedir)) < 0)
+  { //conectando con el host
+    printf("Error conectando con el host, puerto %d .\n", port);
+    close(conexionPedir);
+    return NULL;
+  }
+  printf("Conectado con %s:%d\n",inet_ntoa(clientePedir.sin_addr),htons(clientePedir.sin_port));
+  //inet_ntoa(); está definida en <arpa/inet.h>
+
+  //le envio al otro cliente 'leer' para que el em mande una copia (version) de la pagina que tiene que es a la que em estoy conectando
+  send(conexionPedir, "borrar", 100, 0); //envio
+  bzero(bufferPedir, 100);
 }
 
 void* atenderCliente(void* clienteDataParam){
@@ -66,11 +106,6 @@ void* atenderCliente(void* clienteDataParam){
         int paginaClienteIndice = paginaClienteInt-1;
         printf("El cliente quiere %s la pagina #%d.\n", accion, paginaClienteInt);
         
-        /*for(int p = 0; p<_cantidadPaginas; p++){
-          printf("Pagina #%d en su version %d, actual dueño host: %s en puerto: %d , lock: %d \n", _paginasServer[p].id, 
-            _paginasServer[p].version, _paginasServer[p].hostOwner, _paginasServer[p].puertoOwner, _paginasServer[p].lock);
-        }*/
-
         int trabajar = 1;
         while(trabajar){
           if(_paginasServer[paginaClienteIndice].lock){
@@ -87,11 +122,24 @@ void* atenderCliente(void* clienteDataParam){
           if(_paginasServer[paginaClienteIndice].puertoOwner == _puerto &&
              strcmp(_paginasServer[paginaClienteIndice].hostOwner, "127.0.0.1") == 0 ){
             printf("La pagina #%d no ha sido escrita por ningun cliente. Leerla en su version 0.\n", paginaClienteInt);
-            send(data->id, "leer", 100, 0);
-          }else{
+            bzero((char *)&buffer, sizeof(buffer));
+            sprintf(buffer, "leer:0:0:%d", _puertoCopiasGlobal);
+            send(data->id, buffer, 100, 0);
+
+            clienteConCopia *args = malloc(sizeof *args);
+            args->host = inet_ntoa(data->address);
+            args->port = _puertoCopiasGlobal;
+            _paginasServer[paginaClienteIndice].clientes[_paginasServer[paginaClienteIndice].cantClientes] = args;
+            _paginasServer[paginaClienteIndice].cantClientes++; 
+
+            _puertoCopiasGlobal += 1;
+          } else {
             printf("La pagina #%d es de otro cliente.\n", paginaClienteInt);
-            printf("\t El cliente va a pedir la pagina a otro cliente con %s:%d\n",_paginasServer[paginaClienteIndice].hostOwner,_paginasServer[paginaClienteIndice].puertoOwner);
-            sprintf(buffer, "pedir:%s:%d", _paginasServer[paginaClienteIndice].hostOwner,_paginasServer[paginaClienteIndice].puertoOwner);
+            printf("El cliente va a pedir la pagina a otro cliente en el host: %s y puerto: %d\n",_paginasServer[paginaClienteIndice].hostOwner,
+              _paginasServer[paginaClienteIndice].puertoOwner);
+            bzero((char *)&buffer, sizeof(buffer));
+            sprintf(buffer, "pedir:%s:%d:%d", _paginasServer[paginaClienteIndice].hostOwner,_paginasServer[paginaClienteIndice].puertoOwner, _puertoCopiasGlobal);
+            _puertoCopiasGlobal += 1;
             send(data->id, buffer, 100, 0);
           }
         } else { // Caso quiere escribir
@@ -112,6 +160,19 @@ void* atenderCliente(void* clienteDataParam){
 
           } else {
             _puertoGlobal += 1;
+
+            for(int p = 0; p < _paginasServer[paginaClienteIndice].cantClientes; p++){
+                  printf("El cliente %s:%d debe borrar su copia. \n", _paginasServer[paginaClienteIndice].clientes[p]->host,
+                  _paginasServer[paginaClienteIndice].clientes[p]->port);
+                
+                clienteBorreCopia(
+                  _paginasServer[paginaClienteIndice].clientes[p]->host,
+                  _paginasServer[paginaClienteIndice].clientes[p]->port
+                  );
+            }
+              memset(_paginasServer[paginaClienteIndice].clientes, 0, sizeof(_paginasServer[paginaClienteIndice].clientes));
+              _paginasServer[paginaClienteIndice].cantClientes = 0;
+
             printf("La pagina #%d es de otro cliente, pedir en puerto: %d , atender en puerto: %d.\n", paginaClienteInt, _paginasServer[paginaClienteIndice].puertoOwner, _puertoGlobal);
             bzero((char *)&buffer, sizeof(buffer));
             sprintf(buffer, "pedir:%s:%d:%d", _paginasServer[paginaClienteIndice].hostOwner, _puertoGlobal,_paginasServer[paginaClienteIndice].puertoOwner);
@@ -155,6 +216,48 @@ void* conectarCliente(){
     return NULL;
 }
 
+char* clienteVersion(char* host, int port){
+  struct sockaddr_in clientePedir; //Declaración de la estructura con información para la conexión
+  struct hostent *servidorPedir; //Declaración de la estructura con información del host
+  servidorPedir = gethostbyname(host); //Asignacion
+  if(servidorPedir == NULL)
+  { //Comprobación 
+    printf("Host erróneo\n");
+    return "error";
+  }
+  int conexionPedir;
+  char bufferPedir[100];
+
+  conexionPedir = socket(AF_INET, SOCK_STREAM, 0); //Asignación del socket       
+  bzero((char *)&clientePedir, sizeof((char *)&clientePedir)); //Rellena toda la estructura de 0's
+  //La función bzero() es como memset() pero inicializando a 0 todas la variables
+  clientePedir.sin_family = AF_INET; //asignacion del protocolo
+  clientePedir.sin_port = htons(port); //asignacion del puerto
+  bcopy((char *)servidorPedir->h_addr, (char *)&clientePedir.sin_addr.s_addr, sizeof(servidorPedir->h_length));
+  //bcopy(); copia los datos del primer elemendo en el segundo con el tamaño máximo del tercer argumento.
+            
+  //cliente.sin_addr = *((struct in_addr *)servidor->h_addr); //<--para empezar prefiero que se usen
+  //inet_aton(argv[1],&cliente.sin_addr); //<--alguna de estas dos funciones
+            
+  if(connect(conexionPedir,(struct sockaddr *)&clientePedir, sizeof(clientePedir)) < 0)
+  { //conectando con el host
+    printf("Error conectando con el host, puerto %d .\n", port);
+    close(conexionPedir);
+    return "error";
+  }
+  //printf("Conectado con %s:%d\n",inet_ntoa(clientePedir.sin_addr),htons(clientePedir.sin_port));
+  //inet_ntoa(); está definida en <arpa/inet.h>
+
+  //le envio al otro cliente 'leer' para que el em mande una copia (version) de la pagina que tiene que es a la que em estoy conectando
+  send(conexionPedir, "matese", 100, 0); //envio
+  bzero(bufferPedir, 100);
+
+  recv(conexionPedir, bufferPedir, 100, 0);
+  close(conexionPedir);
+  char *version = bufferPedir;
+  return version;
+}
+
 void* finalizarPrograma(){
     printf("%s", (char*)"Presione 'E' para finalizar.\n");
     int ch;
@@ -163,6 +266,22 @@ void* finalizarPrograma(){
         if(ch=='E'){
             printf("%s", (char*)"Exit: terminando procesos.\n");
             _fCloseThreads = 0;
+
+            //Pedirle a todos los clientes duenos que me dan le version y que mueran.
+            for(int p = 0; p<_cantidadPaginas; p++){
+
+              if(_paginasServer[p].puertoOwner == _puerto &&
+                strcmp(_paginasServer[p].hostOwner, "127.0.0.1") == 0 ){
+                printf("Pagina #%d en su version %d.\n", _paginasServer[p].id, _paginasServer[p].version);
+              } else {
+                char* version;
+                version = clienteVersion(_paginasServer[p].hostOwner,_paginasServer[p].puertoOwner);
+                printf("Pagina #%d en su version %d.\n", _paginasServer[p].id, atoi(version));
+              }
+
+            }
+
+
             /*
             Crear un cliente "tonto" para matar al servidor 
             en caso de que nadie haga un request
@@ -257,11 +376,11 @@ int main(int argc, char **argv){
     _paginasServer[p].lock = 0;
   }
 
-  printf("Se crearon %d paginas.\n", cantidadPaginas);
+  /*printf("Se crearon %d paginas.\n", cantidadPaginas);
   for(int p = 0; p<cantidadPaginas; p++){
     printf("Pagina #%d en su version %d, actual dueño host: %s en puerto: %d \n", _paginasServer[p].id, 
       _paginasServer[p].version, _paginasServer[p].hostOwner, _paginasServer[p].puertoOwner);
-  }
+  }*/
 
   // Conectar puerto con servidor
   if(bind(_conexionServidor, (struct sockaddr *)&servidor, sizeof(servidor)) < 0)
