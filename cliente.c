@@ -340,6 +340,7 @@ int main(int argc, char* argv[]){
     pagina = getPagina(paginaMin,paginaMax);
     paginaIndice = pagina-paginaMin;
     leer = getLeer(atoi(lecturaConfig));
+    printf("\t-----------------------------\n");
     if(leer){
       printf("Intentando leer pagina #%d.\n",pagina);
       

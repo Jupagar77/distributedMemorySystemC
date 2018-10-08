@@ -88,6 +88,7 @@ void* atenderCliente(void* clienteDataParam){
   char buffer[100];
   char *saveptr, *accion, *paginaCliente;
   
+  printf("\t-----------------------------\n");
   // Recibo data
   if(recv(data->id, buffer, 100, 0) < 0)
   { 
