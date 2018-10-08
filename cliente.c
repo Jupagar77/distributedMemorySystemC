@@ -157,7 +157,7 @@ void* serDueno(void* dataPagina) {
         close(conexionServidor);
         return NULL;
       } else {
-        printf("Conectado con %s:%d.\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));  
+        //printf("Conectado con %s:%d.\n", inet_ntoa(cliente.sin_addr),htons(cliente.sin_port));  
         char *saveptr, *accion, *paginaCliente, *puertoMatar;
         accion = strtok_r(buffer, ":", &saveptr);
         puertoMatar = strtok_r(NULL, ":", &saveptr);
