@@ -147,6 +147,19 @@ void* atenderCliente(void* clienteDataParam){
             strcmp(_paginasServer[paginaClienteIndice].hostOwner, "127.0.0.1") == 0 ){
 
             _puertoGlobal += 1;
+
+            for(int p = 0; p < _paginasServer[paginaClienteIndice].cantClientes; p++){
+                  printf("El cliente %s:%d debe borrar su copia. \n", _paginasServer[paginaClienteIndice].clientes[p]->host,
+                  _paginasServer[paginaClienteIndice].clientes[p]->port);
+                
+                clienteBorreCopia(
+                  _paginasServer[paginaClienteIndice].clientes[p]->host,
+                  _paginasServer[paginaClienteIndice].clientes[p]->port
+                  );
+            }
+            memset(_paginasServer[paginaClienteIndice].clientes, 0, sizeof(_paginasServer[paginaClienteIndice].clientes));
+            _paginasServer[paginaClienteIndice].cantClientes = 0;
+
             _paginasServer[paginaClienteIndice].hostOwner = inet_ntoa(data->address);
             _paginasServer[paginaClienteIndice].puertoOwner = _puertoGlobal;
             

@@ -532,7 +532,7 @@ int main(int argc, char* argv[]){
             //La función bzero() es como memset() pero inicializando a 0 todas la variables
             clientePedir.sin_family = AF_INET; //asignacion del protocolo
             clientePedir.sin_port = htons(puertoPedirInt); //asignacion del puerto
-            bcopy((char *)servidor->h_addr, (char *)&cliente.sin_addr.s_addr, sizeof(servidor->h_length));
+            bcopy((char *)servidorPedir->h_addr, (char *)&clientePedir.sin_addr.s_addr, sizeof(servidorPedir->h_length));
             //bcopy(); copia los datos del primer elemendo en el segundo con el tamaño máximo del tercer argumento.
             
             //cliente.sin_addr = *((struct in_addr *)servidor->h_addr); //<--para empezar prefiero que se usen
