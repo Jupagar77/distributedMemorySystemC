@@ -1,5 +1,0 @@
-IPServidor:127.0.0.1
-Puerto:6090
-RangoPaginas:2-4
-MediaExponencial:3
-PropabilidadLectura:80
