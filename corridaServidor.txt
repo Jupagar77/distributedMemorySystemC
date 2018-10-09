@@ -1,0 +1,263 @@
+A la escucha en el puerto 9090.
+Presione 'E' para finalizar.
+
+Esperando solicitud de algun cliente.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59560.
+El cliente quiere escribir la pagina #6.
+La pagina #6 no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.
+Pagina #6 ha cambiando de dueno, host: 192.168.43.241 utilizara puerto: 9091 para atender otros clientes.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59206.
+El cliente quiere leer la pagina #3.
+La pagina #3 no ha sido escrita por ningun cliente. Leerla en su version 0.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59562.
+El cliente quiere leer la pagina #8.
+La pagina #8 no ha sido escrita por ningun cliente. Leerla en su version 0.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59564.
+El cliente quiere leer la pagina #9.
+La pagina #9 no ha sido escrita por ningun cliente. Leerla en su version 0.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59208.
+El cliente quiere leer la pagina #2.
+La pagina #2 no ha sido escrita por ningun cliente. Leerla en su version 0.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59566.
+El cliente quiere escribir la pagina #8.
+El cliente 192.168.43.241:2001 debe borrar su copia. 
+Conectado con 192.168.43.241:2001
+La pagina #8 no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.
+Pagina #8 ha cambiando de dueno, host: 192.168.43.241 utilizara puerto: 9092 para atender otros clientes.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59210.
+El cliente quiere escribir la pagina #2.
+El cliente 192.168.43.197:2003 debe borrar su copia. 
+Conectado con 192.168.43.197:2003
+La pagina #2 no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.
+Pagina #2 ha cambiando de dueno, host: 192.168.43.197 utilizara puerto: 9093 para atender otros clientes.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59568.
+El cliente quiere leer la pagina #5.
+La pagina #5 no ha sido escrita por ningun cliente. Leerla en su version 0.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59570.
+El cliente quiere escribir la pagina #7.
+La pagina #7 no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.
+Pagina #7 ha cambiando de dueno, host: 192.168.43.241 utilizara puerto: 9094 para atender otros clientes.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59212.
+El cliente quiere escribir la pagina #5.
+El cliente 192.168.43.241:2004 debe borrar su copia. 
+Conectado con 192.168.43.241:2004
+La pagina #5 no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.
+Pagina #5 ha cambiando de dueno, host: 192.168.43.197 utilizara puerto: 9095 para atender otros clientes.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59578.
+El cliente quiere escribir la pagina #5.
+La pagina #5 es de otro cliente, pedir en puerto: 9095 , atender en puerto: 9096.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59214.
+El cliente quiere leer la pagina #5.
+La pagina #5 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.241 y puerto: 9096
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59218.
+El cliente quiere leer la pagina #4.
+La pagina #4 no ha sido escrita por ningun cliente. Leerla en su version 0.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59220.
+El cliente quiere leer la pagina #2.
+La pagina #2 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.197 y puerto: 9093
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59224.
+El cliente quiere leer la pagina #5.
+La pagina #5 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.241 y puerto: 9096
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59228.
+El cliente quiere escribir la pagina #5.
+La pagina #5 es de otro cliente, pedir en puerto: 9096 , atender en puerto: 9097.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59232.
+El cliente quiere leer la pagina #3.
+La pagina #3 no ha sido escrita por ningun cliente. Leerla en su version 0.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59234.
+El cliente quiere leer la pagina #4.
+La pagina #4 no ha sido escrita por ningun cliente. Leerla en su version 0.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59594.
+El cliente quiere escribir la pagina #5.
+La pagina #5 es de otro cliente, pedir en puerto: 9097 , atender en puerto: 9098.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59236.
+El cliente quiere leer la pagina #5.
+La pagina #5 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.241 y puerto: 9098
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59598.
+El cliente quiere escribir la pagina #9.
+El cliente 192.168.43.241:2002 debe borrar su copia. 
+Conectado con 192.168.43.241:2002
+La pagina #9 no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.
+Pagina #9 ha cambiando de dueno, host: 192.168.43.241 utilizara puerto: 9099 para atender otros clientes.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59240.
+El cliente quiere leer la pagina #5.
+La pagina #5 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.241 y puerto: 9098
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59244.
+El cliente quiere escribir la pagina #3.
+El cliente 192.168.43.197:2000 debe borrar su copia. 
+Conectado con 192.168.43.197:2000
+El cliente 192.168.43.197:2009 debe borrar su copia. 
+Conectado con 192.168.43.197:2009
+La pagina #3 no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.
+Pagina #3 ha cambiando de dueno, host: 192.168.43.197 utilizara puerto: 9100 para atender otros clientes.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59600.
+El cliente quiere leer la pagina #9.
+La pagina #9 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.241 y puerto: 9099
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59246.
+El cliente quiere leer la pagina #3.
+La pagina #3 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.197 y puerto: 9100
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59252.
+El cliente quiere escribir la pagina #5.
+La pagina #5 es de otro cliente, pedir en puerto: 9098 , atender en puerto: 9101.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59256.
+El cliente quiere leer la pagina #5.
+La pagina #5 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.197 y puerto: 9101
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59262.
+El cliente quiere leer la pagina #5.
+La pagina #5 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.197 y puerto: 9101
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59618.
+El cliente quiere leer la pagina #5.
+La pagina #5 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.197 y puerto: 9101
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59266.
+El cliente quiere leer la pagina #3.
+La pagina #3 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.197 y puerto: 9100
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59622.
+El cliente quiere escribir la pagina #9.
+La pagina #9 es de otro cliente, pedir en puerto: 9099 , atender en puerto: 9102.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.241:59628.
+El cliente quiere escribir la pagina #5.
+La pagina #5 es de otro cliente, pedir en puerto: 9101 , atender en puerto: 9103.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59274.
+El cliente quiere escribir la pagina #4.
+El cliente 192.168.43.197:2006 debe borrar su copia. 
+Conectado con 192.168.43.197:2006
+El cliente 192.168.43.197:2010 debe borrar su copia. 
+Conectado con 192.168.43.197:2010
+La pagina #4 no ha sido escrita por ningun cliente. Entregar al cliente en su version 0.
+Pagina #4 ha cambiando de dueno, host: 192.168.43.197 utilizara puerto: 9104 para atender otros clientes.
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59276.
+El cliente quiere leer la pagina #5.
+La pagina #5 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.241 y puerto: 9103
+
+Esperando solicitud de algun cliente.
+	-----------------------------
+Conectado con 192.168.43.197:59280.
+El cliente quiere leer la pagina #4.
+La pagina #4 es de otro cliente.
+El cliente va a pedir la pagina a otro cliente en el host: 192.168.43.197 y puerto: 9104
+Exit: terminando procesos.
+Pagina #1 en su version 0.
+Pagina #2 en su version 1.
+Pagina #3 en su version 3.
+Pagina #4 en su version 2.
+Pagina #5 en su version 9.
+Pagina #6 en su version 5.
+Pagina #7 en su version 3.
+Pagina #8 en su version 4.
+Pagina #9 en su version 2.
+Pagina #10 en su version 0.
+	-----------------------------
